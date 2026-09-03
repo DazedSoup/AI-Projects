@@ -1,0 +1,26 @@
+# Environments
+.venv/
+venv/
+env/
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets / local config
+.env
+.env.*
+*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Claude Code
+.claude/settings.local.json
