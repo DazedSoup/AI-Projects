@@ -50,7 +50,14 @@ def test_cli_offline_writes_enriched_episodes(tiny_run):
 def test_cli_online_without_key_fails_clearly(tiny_run, monkeypatch, capsys):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: False)
-    rc = enrich.main(["--run", str(tiny_run), "--no-shap", "--episodes", "200"])
+    rc = enrich.main(["--run", str(tiny_run), "--online", "--no-shap", "--episodes", "200"])
     assert rc == 2
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
     assert not (tiny_run / "episodes_enriched.jsonl").exists()
+
+
+def test_offline_is_default_and_online_is_opt_in():
+    parse = enrich.build_parser().parse_args
+    assert parse(["--run", "x"]).offline is True
+    assert parse(["--run", "x", "--offline"]).offline is True
+    assert parse(["--run", "x", "--online"]).offline is False

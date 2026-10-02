@@ -148,7 +148,7 @@ def test_newer_models_keep_thinking_on_with_low_effort():
 def test_missing_key_fails_loudly(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr("dotenv.load_dotenv", lambda *a, **k: False)
-    with pytest.raises(MissingCredentialsError, match="ANTHROPIC_API_KEY is not set.*--offline"):
+    with pytest.raises(MissingCredentialsError, match="ANTHROPIC_API_KEY is not set.*--online"):
         Narrator(offline=False)
 
 

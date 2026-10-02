@@ -1,6 +1,6 @@
 """Enrich chosen episodes of a run with SHAP, MITRE tags and move rationale.
 
-    python -m cyberarena.explain.enrich --run runs/<run_id> [--episodes SPEC] [--offline] [--model ID]
+    python -m cyberarena.explain.enrich --run runs/<run_id> [--episodes SPEC] [--online] [--model ID]
 
 ``--episodes`` SPEC (default ``default``):
   default          3 eval episodes per learned-vs-baseline matchup from the final checkpoint, with at least one
@@ -209,13 +209,18 @@ def enrich_turns(turns: list[dict], graph: dict, cfg: dict, shap_svc: ShapServic
     return out, facts
 
 
-def main(argv: list[str] | None = None) -> int:
+def build_parser() -> argparse.ArgumentParser:
     ap = argparse.ArgumentParser(
         prog="python -m cyberarena.explain.enrich", description=__doc__.split("\n\n")[0]
     )
     ap.add_argument("--run", required=True, type=Path, help="runs/<run_id>")
     ap.add_argument("--episodes", default="default", help="default | eval:A | last:N | 2803,2850-2852")
-    ap.add_argument("--offline", action="store_true", help="template rationales, no API calls, no key needed")
+    mode = ap.add_mutually_exclusive_group()
+    mode.add_argument("--online", dest="offline", action="store_false",
+                      help="Claude-written rationales via the Anthropic API (needs ANTHROPIC_API_KEY; costs money)")
+    mode.add_argument("--offline", dest="offline", action="store_true",
+                      help="template rationales, no API calls, no key needed (the default)")
+    ap.set_defaults(offline=True)
     ap.add_argument(
         "--model", default=None, help=f"narration model (env {MODEL_ENV}; default {DEFAULT_MODEL})"
     )
@@ -230,7 +235,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--top-k", type=int, default=ShapSettings.top_k, help="SHAP features kept per row")
     ap.add_argument("--no-shap", action="store_true", help="skip SHAP (shap stays null)")
     ap.add_argument("--out", type=Path, default=None, help="default: <run>/episodes_enriched.jsonl")
-    args = ap.parse_args(argv)
+    return ap
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
 
     run_dir: Path = args.run
     episodes_path = run_dir / "episodes.jsonl"

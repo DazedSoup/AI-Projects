@@ -11,7 +11,7 @@ EPISODES ?= 2000
 SEED ?= 7
 RUN ?= $(lastword $(sort $(wildcard runs/*)))
 
-.PHONY: help venv install test lint data train-models arena enrich enrich-offline dashboard clean
+.PHONY: help venv install test lint data train-models arena enrich enrich-online dashboard clean
 
 help:
 	@echo "venv            create .venv with Python 3.12"
@@ -20,8 +20,8 @@ help:
 	@echo "data            download + preprocess datasets       (phase 2)"
 	@echo "train-models    train the three classifiers          (phase 2)"
 	@echo "arena           train red/blue agents, log episodes  (phase 3)  EPISODES=$(EPISODES) SEED=$(SEED)"
-	@echo "enrich          SHAP + Claude rationale + MITRE      (phase 4)  RUN=$(RUN)"
-	@echo "enrich-offline  same, template rationale, no API     (phase 4)"
+	@echo "enrich          SHAP + template rationale + MITRE    (phase 4)  RUN=$(RUN)  (offline, free)"
+	@echo "enrich-online   same, Claude-written rationale       (phase 4)  needs ANTHROPIC_API_KEY, paid"
 	@echo "dashboard       launch Streamlit                     (phase 5)"
 
 venv:
@@ -50,8 +50,8 @@ arena:
 enrich:
 	$(PY) -m cyberarena.explain.enrich --run $(RUN)
 
-enrich-offline:
-	$(PY) -m cyberarena.explain.enrich --run $(RUN) --offline
+enrich-online:
+	$(PY) -m cyberarena.explain.enrich --run $(RUN) --online
 
 dashboard:
 	$(PY) -m streamlit run src/cyberarena/dashboard/app.py

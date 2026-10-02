@@ -302,7 +302,7 @@ def require_credentials() -> None:
     if not (os.environ.get(KEY_ENV) or "").strip():
         raise MissingCredentialsError(
             f"{KEY_ENV} is not set, so online narration cannot run. Set it in your environment or in .env at the "
-            f"repo root (copy .env.example), or rerun with --offline for deterministic template rationales."
+            f"repo root (copy .env.example), or drop --online to use the free deterministic template rationales."
         )
 
 
