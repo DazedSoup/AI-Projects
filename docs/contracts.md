@@ -89,7 +89,11 @@ Fields filled in Phase 4 (`episodes_enriched.jsonl`):
           "technique_name": "Remote Services", "tactic": "Lateral Movement"}
 ```
 
-Blue actions: `mitre` is either a D3FEND tag (`"framework": "D3FEND"`) or `null`.
+Blue actions: `mitre` is either a D3FEND tag (`"framework": "D3FEND"`) or `null`. Red `wait` is `null`.
+
+Extra enriched fields (added in Phase 4): `rationale_meta` (`{"source": "claude"|"template"|"template:refusal", "model", "input_tokens", "output_tokens"}`),
+`shap[].output` and `shap[].additivity_error`, and `top_features[].raw` (unscaled value).
+Phase 4 also writes `runs/<run_id>/explain_summary.json` (selection, timings, cost estimate) and caches in `runs/<run_id>/explain_cache/`.
 
 ### Summary rows
 
@@ -101,7 +105,7 @@ Blue actions: `mitre` is either a D3FEND tag (`"framework": "D3FEND"`) or `null`
 
 ### Extra fields (added in Phase 3)
 
-- Turn records: `phase` (`"train"`/`"eval"`), `matchup`, `agent` (`"learned"`/`"baseline"`), and `after_episode` on eval turns.
+- Turn records: `phase` (`"train"`/`"eval"`), `matchup`, `agent` (`"learned"`, `"heuristic"` or `"random"`), and `after_episode` on eval turns.
   For baseline agents `decision_values` are heuristic priorities (or zeros), not Q-values.
 - Eval episodes are numbered after training episodes (e.g. 2000+ for a 2000-episode run).
 - Not every episode has turn records: full records are logged for every Nth training episode plus all eval

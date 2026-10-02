@@ -192,7 +192,11 @@ def clean_phishing(df: pd.DataFrame) -> Frames:
 def clean_malware(df: pd.DataFrame) -> Frames:
     """TUANDROMD: 241 binary permission/API features; ``Label`` is malware / goodware."""
     df = df.copy()
-    df.columns = [c.strip() for c in df.columns]
+    # The UCI CSV ships with a case-insensitive find/replace of "no" -> "goodware" applied to its header
+    # too (e.g. DOWNLOAD_WITHOUT_goodwareTIFICATION); undo it in column names only.
+    df.columns = [
+        c.strip().replace("getLastKgoodwarewn", "getLastKnown").replace("goodware", "NO") for c in df.columns
+    ]
     df = df.dropna().drop_duplicates()  # 3.8k of 4.4k rows are exact copies of ~130 malware vectors
     label = df["Label"].astype(str).str.strip().str.lower()
     if not set(label.unique()) <= {"malware", "goodware"}:
