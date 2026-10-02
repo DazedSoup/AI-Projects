@@ -114,4 +114,74 @@ Phase 4 also writes `runs/<run_id>/explain_summary.json` (selection, timings, co
 - `episodes.jsonl` can be ~200 MB. Readers should stream it or index it by episode, not `json.load` the whole file.
 - Checkpoint agents at every eval: `agents/checkpoints/{red,blue}_<after_episode>.json`.
 
+## Simulation Lab (arena ↔ dashboard, added after Phase 5)
+
+The dashboard's Lab page launches training as a **subprocess**. It never imports arena code.
+
+### Parameter spec: `python -m cyberarena.arena.train --describe-params`
+
+This prints JSON to stdout and exits without training. The dashboard builds its widgets entirely from this output,
+so adding a parameter in the arena makes it appear in the UI automatically.
+
+```json
+{"version": 1, "groups": [
+  {"id": "network", "label": "Network", "params": [
+    {"key": "n_nodes", "label": "Hosts", "type": "int", "default": null, "min": 10, "max": 20, "step": 1,
+     "nullable": true, "help": "null = seeded 12-16", "target": "cli", "flag": "--n-nodes"},
+    {"key": "p_phish", "label": "Phish success", "type": "float", "default": 0.35, "min": 0.0, "max": 1.0,
+     "step": 0.01, "help": "...", "target": "env"},
+    {"key": "baseline", "label": "Baseline type", "type": "choice", "default": "heuristic",
+     "choices": ["heuristic", "random"], "target": "cli", "flag": "--baseline"}
+  ]}
+]}
+```
+
+- `type` is one of `int`, `float`, `bool` or `choice`.
+- `target: "env"` keys go into `--env-json`. Dotted keys like `p_implant_leak.malware` set one entry of a dict field.
+- `target: "cli"` keys are passed as `flag value` (a bool passes the flag alone when true).
+- `advanced: true` marks params the UI may hide behind an expander.
+- Group ids include `network`, `red`, `blue`, `rewards`, `training`, `opponents` and `memory`.
+
+### New train flags
+
+- `--init-from <run_dir>`: warm-start both learners from `<run_dir>/agents/{red,blue}.json`. Combine with
+  `--init-side red|blue|both` (default `both`); a side that isn't warm-started trains from scratch.
+  `config.json` records `"init_from": {"run_id", "side"}`. Q-table states don't depend on graph size, so this works across graph sizes.
+- `--label "<text>"`: a free-text label stored in `config.json` → `"label"`.
+- `--eval-log-n K`: write full turn records for only the first K eval episodes per matchup per checkpoint (default 10).
+  All `--eval-n` episodes still count toward the win rate. This decouples eval precision from log size.
+- Unknown `--env-json` keys, or out-of-range values, exit with code 2 and a one-line error on stderr.
+
+### Progress file: `runs/<run_id>/progress.json`
+
+Rewritten atomically (write to a temp file, then rename) at least every 2 s while training runs:
+
+```json
+{"status": "running", "episode": 740, "episodes": 2000, "started": "2026-10-03T10:15:00", "updated": "...",
+ "last_eval": {"after_episode": 500, "red_win_rate": 0.62, "blue_win_rate": 0.44}, "error": null}
+```
+
+`status` is `running`, `done` or `error`. On a crash, write `error` with the message before exiting non-zero.
+The run directory and `progress.json` must exist within ~1 s of launch, before classifiers load. The first line of stdout is
+`RUN_DIR <absolute path>`, so the launcher can find the run directory.
+
+Implemented extras:
+- `progress.json` also carries `phase` (`setup`/`train`/`eval`/`done`/`error`).
+- `config.json` carries `label`, `init_from` and `params` (all CLI values); eval summary rows carry `logged_n`.
+- **Cancelling on Windows:** launch train with `CREATE_NEW_PROCESS_GROUP` and send `CTRL_BREAK_EVENT`.
+  Train then writes `status: error`, `error: "cancelled"` and exits with code 130. `terminate()` can't be caught.
+
+### Lab runner files (dashboard-owned)
+
+- `runs/.lab/<token>.json`: job record written before launch. `<token>.stop` is the stop request.
+  `<token>.train.log` holds train's output.
+- `runs/<run_id>/lab_status.json`: `{"stage": "starting"|"training"|"enriching"|"done"|"error", "message", ...}`.
+  `lab_enrich.log` holds enrich's output.
+- Readers listing runs must skip `runs/.lab/`.
+
+### Enrichment
+
+The Lab runs `python -m cyberarena.explain.enrich --run <run_dir>` afterwards. Narration defaults to **offline**
+(template, no API, no cost); online narration needs an explicit `--online` flag.
+
 Win conditions: red wins on exfiltrating from the crown jewel. Blue wins when red has no foothold left, or when the turn limit is reached first.
