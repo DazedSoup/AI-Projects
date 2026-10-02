@@ -17,9 +17,9 @@ __pycache__/
 !.env.example
 
 # cyberarena generated outputs
-data/
-artifacts/
-runs/
+/data/
+/artifacts/
+/runs/
 .shap_cache/
 .narration_cache/
 *.local
