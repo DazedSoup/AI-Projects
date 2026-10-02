@@ -360,3 +360,80 @@ def q_bar_figure(values: dict, chosen: str, actor: str, kind: str) -> go.Figure:
     )
     fig.update_xaxes(gridcolor=GRID, title=kind, zeroline=True, zerolinecolor=GRID)
     return fig
+
+
+# ------------------------------------------------------------------------------------------------ Lab: compare runs
+
+# Categorical run colours (dataviz reference order, slot 2 taken from its dark step so one list passes the
+# validator on both the light and the dark surface). Colour follows the run (its position in the run history),
+# never its rank in the selection. Markers repeat the identity for colour-blind readers.
+RUN_COLORS = ["#2a78d6", "#d95926", "#1baf7a", "#c98500", "#d55181", "#008300", "#9085e9"]
+RUN_SYMBOLS = ["circle", "square", "diamond", "triangle-up", "x", "star", "hexagon"]
+COMPARE_PANELS = (
+    ("red", "Learned red vs baseline blue — red win rate"),
+    ("blue", "Learned blue vs baseline red — blue win rate"),
+)
+
+
+def run_style(slot: int) -> tuple[str, str]:
+    return RUN_COLORS[slot % len(RUN_COLORS)], RUN_SYMBOLS[slot % len(RUN_SYMBOLS)]
+
+
+def compare_figure(runs: list[dict]) -> go.Figure:
+    """Overlay eval curves of several runs. ``runs``: ``[{"name", "curve" (eval_curve frame), "slot"}]``.
+
+    Two panels on one shared win-rate axis (one per learned side), each point with its 95% Wilson interval.
+    """
+    from plotly.subplots import make_subplots
+
+    fig = make_subplots(
+        rows=1, cols=2, shared_yaxes=True, horizontal_spacing=0.06,
+        subplot_titles=[t for _, t in COMPARE_PANELS],
+    )  # fmt: skip
+    for col_i, (side, _) in enumerate(COMPARE_PANELS, start=1):
+        fig.add_hline(y=0.5, line={"color": GRID, "width": 1, "dash": "dot"}, row=1, col=col_i)
+    for r in runs:
+        colour, symbol = run_style(r["slot"])
+        curve = r["curve"]
+        for col_i, (side, _) in enumerate(COMPARE_PANELS, start=1):
+            sub = curve[curve["side"] == side].sort_values("after_episode") if not curve.empty else curve
+            if sub.empty:
+                continue
+            fig.add_trace(
+                go.Scatter(
+                    x=sub["after_episode"],
+                    y=sub["win_rate"],
+                    mode="lines+markers",
+                    name=r["name"],
+                    legendgroup=r["name"],
+                    showlegend=col_i == 1 or curve[curve["side"] == "red"].empty,
+                    line={"color": colour, "width": 2},
+                    marker={"size": 9, "color": colour, "symbol": symbol},
+                    error_y={
+                        "type": "data",
+                        "symmetric": False,
+                        "array": sub["ci_high"] - sub["win_rate"],
+                        "arrayminus": sub["win_rate"] - sub["ci_low"],
+                        "color": colour,
+                        "thickness": 1.2,
+                        "width": 4,
+                    },
+                    customdata=sub[["wins", "n", "ci_low", "ci_high"]].to_numpy(),
+                    hovertemplate="after ep %{x}<br>"
+                    + side
+                    + " win rate %{y:.0%} (%{customdata[0]}/%{customdata[1]})"
+                    "<br>95% CI %{customdata[2]:.0%}–%{customdata[3]:.0%}<extra>" + r["name"] + "</extra>",
+                ),
+                row=1,
+                col=col_i,
+            )
+    fig.update_layout(
+        **{**_BASE_LAYOUT, "margin": {"l": 60, "r": 10, "t": 40, "b": 10}},
+        height=420,
+        hovermode="closest",
+        legend={"orientation": "h", "y": -0.2, "x": 0},
+    )
+    fig.update_yaxes(range=[0, 1], tickformat=".0%", gridcolor=GRID, zeroline=False)
+    fig.update_yaxes(title="win rate (eval vs baseline)", row=1, col=1)
+    fig.update_xaxes(gridcolor=GRID, zeroline=False, title="training episode")
+    return fig

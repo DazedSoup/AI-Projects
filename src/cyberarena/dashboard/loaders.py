@@ -553,13 +553,23 @@ def cached_graph(run_dir: str) -> dict:
     return load_graph(Path(run_dir))
 
 
+def file_stamp(path: Path) -> tuple[int, int] | None:
+    """``(size, mtime_ns)`` of a file, or ``None``: a cache key that changes when a live run rewrites it."""
+    try:
+        s = Path(path).stat()
+    except OSError:
+        return None
+    return (s.st_size, s.st_mtime_ns)
+
+
 @_cache
-def cached_summary(run_dir: str) -> tuple[pd.DataFrame, pd.DataFrame]:
+def cached_summary(run_dir: str, stamp: tuple | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    # stamp: file_stamp(summary.jsonl), so a run that is still training is re-read when it grows
     return load_summary(Path(run_dir))
 
 
 @_cache
-def cached_enriched(run_dir: str) -> dict[int, list[dict]]:
+def cached_enriched(run_dir: str, stamp: tuple | None = None) -> dict[int, list[dict]]:
     return load_enriched(Path(run_dir))
 
 
