@@ -99,4 +99,15 @@ Blue actions: `mitre` is either a D3FEND tag (`"framework": "D3FEND"`) or `null`
 {"kind": "eval", "after_episode": 400, "matchup": "blue_learned_vs_red_baseline", "n": 50, "red_win_rate": 0.30, "blue_win_rate": 0.70}
 ```
 
+### Extra fields (added in Phase 3)
+
+- Turn records: `phase` (`"train"`/`"eval"`), `matchup`, `agent` (`"learned"`/`"baseline"`), and `after_episode` on eval turns.
+  For baseline agents `decision_values` are heuristic priorities (or zeros), not Q-values.
+- Eval episodes are numbered after training episodes (e.g. 2000+ for a 2000-episode run).
+- Not every episode has turn records: full records are logged for every Nth training episode plus all eval
+  episodes (see `config.json` → `logging`). Summary rows carry `logged: true|false`; eval rows carry `episodes: [first, last]`.
+- `classifier_inputs` holds only the rows emitted this turn (usually 1). Rows are rounded to 3 dp.
+- `episodes.jsonl` can be ~200 MB. Readers should stream it or index it by episode, not `json.load` the whole file.
+- Checkpoint agents at every eval: `agents/checkpoints/{red,blue}_<after_episode>.json`.
+
 Win conditions: red wins on exfiltrating from the crown jewel. Blue wins when red has no foothold left, or when the turn limit is reached first.

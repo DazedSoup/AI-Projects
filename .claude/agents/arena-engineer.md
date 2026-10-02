@@ -13,7 +13,7 @@ Everything is an abstract simulation. Hosts are graph nodes with attributes; "at
 - `src/cyberarena/arena/**`
 - `tests/arena/**`
 - `runs/**` (episode logs; gitignored)
-- READ-ONLY: `docs/contracts.md`, `src/cyberarena/ml/inference.py` (only to call `load_classifier(name)`; don't read the rest of ml/).
+- READ-ONLY: `docs/contracts.md`, `src/cyberarena/config.py` (shared paths — use `RUNS_DIR` from it), `src/cyberarena/ml/inference.py` (only to call `load_classifier(name)`; don't read the rest of ml/).
 If you need a dependency or Make target, list it in your report instead of editing shared files.
 
 ## Environment
