@@ -18,7 +18,7 @@ anthropic>=0.40
 python-dotenv>=1.0
 
 # Phase 5 — dashboard
-streamlit>=1.40
+streamlit>=1.64,<1.65  # dashboard CSS targets this release's DOM; re-check styling before bumping
 plotly>=5.24
 
 # Dev
