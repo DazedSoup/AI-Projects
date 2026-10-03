@@ -4,6 +4,9 @@ Each agent picks an *action type*; the concrete (source, target) pair comes from
 the learned policy, the heuristic and the random baseline differ only in which action they choose.
 Red's view uses what an intruder knows (its footholds, privileges, its own sensor noise). Blue's view uses
 only what a defender sees (classifier scores, detected/isolated/patched flags), never ground truth.
+
+The default v4 learner is ``arena/dqn.py::DQNAgent``, which scores every concrete move (host included) with a
+Keras Q-network; ``QAgent`` here is the v1-v3 learner kept as ``--agent tabular``.
 """
 
 from __future__ import annotations
@@ -28,6 +31,16 @@ class Decision:
     decision_values: dict[str, float]
     epsilon: float
     explored: bool
+    choice: Any = None  # DQN agents: the scored candidate set (``dqn._Choice``), for logging
+
+    def log_fields(self) -> tuple[dict[str, float], list[dict[str, Any]] | None, dict[str, float] | None]:
+        """``decision_values``, ``candidates``, ``chosen_features`` of the turn record (v4).
+
+        DQN agents key decision values by concrete move (``"exploit→7"``); tabular and scripted agents keep
+        per-action-type values and have no candidate list or feature vector (``None``)."""
+        if self.choice is None:
+            return self.decision_values, None, None
+        return self.choice.log_fields()
 
 
 # --------------------------------------------------------------------------------------------- views
@@ -210,10 +223,13 @@ class HeuristicAgent(BaseAgent):
 
 
 class QAgent(BaseAgent):
-    """Tabular Q-learning, epsilon-greedy over valid actions, Q-table keyed by the side's feature tuple."""
+    """Tabular Q-learning, epsilon-greedy over valid actions, Q-table keyed by the side's feature tuple.
+
+    The v1-v3 learner (``--agent tabular``): it picks an action type; ``choose_target`` picks the host."""
 
     kind = "learned"
     learns = True
+    agent_type = "tabular"
 
     def __init__(self, side: str, seed: int | None = None, alpha: float = 0.1, gamma: float = 0.97,
                  epsilon: float = 1.0, replay_size: int = 20000):  # fmt: skip
@@ -229,6 +245,27 @@ class QAgent(BaseAgent):
         self.q: dict[tuple[int, ...], np.ndarray] = {}
         self.features = FEATURES[side]
         self._pending: tuple[tuple[int, ...], int, float] | None = None
+        self.reset_stats()
+
+    def reset_stats(self) -> None:
+        """Rolling-window counters behind the ``agent_stats`` rows of learning.jsonl."""
+        self.td_abs_sum = 0.0
+        self.td_n = 0
+        self.action_counts = np.zeros(self.n, dtype=np.int64)
+
+    def count_action(self, a: int) -> None:
+        self.action_counts[a] += 1
+
+    def stats(self) -> dict[str, Any]:
+        n_act = int(self.action_counts.sum())
+        q = np.array([v for v in self.q.values()]) if self.q else np.zeros((0, self.n))
+        return {"n_states": len(self.q),
+                "mean_abs_q": round(float(np.abs(q).mean()), 4) if q.size else 0.0,
+                "td_error": round(self.td_abs_sum / self.td_n, 4) if self.td_n else None,
+                "n_updates": self.td_n,
+                "epsilon": round(float(self.epsilon), 4),
+                "action_mix": {self.ids[i]: round(int(c) / n_act, 4) for i, c in enumerate(self.action_counts)
+                               if c} if n_act else {}}  # fmt: skip
 
     def values(self, key: tuple[int, ...]) -> np.ndarray:
         v = self.q.get(key)
@@ -253,6 +290,15 @@ class QAgent(BaseAgent):
 
     def begin_episode(self) -> None:
         self._pending = None
+
+    # driver hooks shared with ``DQNAgent``: called around ``act`` on the learner's own turns
+    def pre_step(self, env: CyberArenaEnv) -> None:
+        self.before_act(env)
+        self._key = self.features(env)
+
+    def post_step(self, decision: Decision) -> None:
+        self.after_act(self._key, decision.action)
+        self.count_action(decision.action)
 
     def before_act(self, env: CyberArenaEnv) -> None:
         """Close the previous transition now that the next own state is known."""
@@ -293,7 +339,10 @@ class QAgent(BaseAgent):
                 valid: tuple[int, ...]) -> None:  # fmt: skip
         target = r if nxt is None else r + self.gamma * max(self.values(nxt)[v] for v in valid)
         qv = self.values(key)
-        qv[a] += self.alpha * (target - qv[a])
+        td = target - qv[a]
+        self.td_abs_sum += abs(float(td))
+        self.td_n += 1
+        qv[a] += self.alpha * td
 
     def replay(self, n: int) -> None:
         """Re-apply ``n`` uniformly sampled past transitions (cheap tabular experience replay)."""

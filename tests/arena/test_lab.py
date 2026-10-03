@@ -14,7 +14,7 @@ from cyberarena.arena.train import build_parser, main
 
 TINY = ["--episodes", "8", "--seed", "3", "--eval-every", "4", "--eval-n", "3", "--eval-log-n", "1",
         "--log-every", "4", "--stub", "--quiet"]  # fmt: skip
-GROUP_IDS = {"network", "red", "blue", "rewards", "training", "opponents", "memory"}
+GROUP_IDS = {"network", "red", "blue", "rewards", "training", "opponents", "memory", "adaptation"}
 
 
 def all_params():
@@ -59,7 +59,7 @@ def test_spec_env_params_match_arena_config():
         if p["target"] == "env":
             field, _, sub = p["key"].partition(".")
             assert p["default"] == (d[field][sub] if sub else d[field])
-            assert isinstance(p["default"], int if p["type"] == "int" else float)
+            assert isinstance(p["default"], {"int": int, "bool": bool}.get(p["type"], float))
 
 
 def test_spec_cli_params_match_parser():
@@ -133,7 +133,7 @@ def test_validation_accepts_dotted_and_nested(tmp_path):
 
 @pytest.fixture(scope="module")
 def base_run(tmp_path_factory):
-    return main([*TINY, "--runs-dir", str(tmp_path_factory.mktemp("runs")), "--label", "base"])
+    return main([*TINY, "--runs-dir", str(tmp_path_factory.mktemp("runs")), "--label", "base", "--agent", "tabular"])
 
 
 def test_progress_done(base_run):
@@ -141,15 +141,17 @@ def test_progress_done(base_run):
     assert p["status"] == "done" and p["error"] is None
     assert p["episode"] == p["episodes"] == 8
     assert p["last_eval"]["after_episode"] == 8
-    assert set(p["last_eval"]) == {"after_episode", "red_win_rate", "blue_win_rate"}
+    assert set(p["last_eval"]) == {"after_episode", "red_win_rate", "blue_win_rate", "evasive_blue_win_rate"}
+    assert set(p["last_eval"]["evasive_blue_win_rate"]) == {"0.4", "0.7"}
     assert p["started"] and p["updated"]
 
 
 def test_config_label_and_eval_log_n(base_run):
     cfg = json.loads((base_run / "config.json").read_text())
     assert cfg["label"] == "base" and cfg["init_from"] is None and cfg["eval"]["log_n"] == 1
-    evals = [r for r in read_jsonl(base_run / "summary.jsonl") if r["kind"] == "eval"]
-    logged_eval_eps = {r["episode"] for r in read_jsonl(base_run / "episodes.jsonl") if r["phase"] == "eval"}
+    evals = [r for r in read_jsonl(base_run / "summary.jsonl") if r["kind"] == "eval" and "evasion" not in r]
+    logged_eval_eps = {r["episode"] for r in read_jsonl(base_run / "episodes.jsonl")
+                       if r["phase"] == "eval" and not r["probe_game"]}  # probe games are logged separately
     assert all(r["n"] == 3 for r in evals)
     assert logged_eval_eps == {r["episodes"][0] for r in evals}  # only the first eval episode per block
 
@@ -217,17 +219,19 @@ def test_warm_start_loads_q_tables(base_run, tmp_path, monkeypatch):
 
     monkeypatch.setattr(train, "play_episode", spy)
     run = main([*TINY, "--runs-dir", str(tmp_path), "--init-from", str(base_run), "--init-side", "red",
-                "--eps-start", "0.3"])  # fmt: skip
+                "--eps-start", "0.3", "--agent", "tabular"])  # fmt: skip
     assert set(seen["red"]) == set(saved["red"])
     for key, v in saved["red"].items():
         assert seen["red"][key] == pytest.approx(v)
     assert seen["blue"] == {}  # blue not warm-started -> fresh table
     cfg = json.loads((run / "config.json").read_text())
-    assert cfg["init_from"] == {"run_id": base_run.name, "side": "red"}
+    assert {"run_id": base_run.name, "side": "red"}.items() <= cfg["init_from"].items()
+    assert cfg["init_from"]["detectors"] == {}  # red-only warm start never brings blue's detectors
 
 
 def test_warm_start_both_across_graph_sizes(base_run, tmp_path):
-    run = main([*TINY, "--runs-dir", str(tmp_path), "--init-from", str(base_run), "--n-nodes", "19"])
+    run = main([*TINY, "--runs-dir", str(tmp_path), "--init-from", str(base_run), "--n-nodes", "19",
+                "--agent", "tabular"])  # fmt: skip
     for s in ("red", "blue"):
         before = QAgent.load(base_run / "agents" / f"{s}.json").q
         after = QAgent.load(run / "agents" / f"{s}.json").q

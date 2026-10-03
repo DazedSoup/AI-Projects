@@ -8,6 +8,11 @@ negative-class rows. Rows are pre-sampled and pre-scored in one batch per (model
 ``step()`` never calls the model.
 
 Turn order: red acts, then blue, alternating. ``step(action)`` applies one actor's action.
+
+Adaptive runs (v2, docs/contracts.md "Adaptive detectors & learning telemetry"): the pools come from
+``AdaptiveDetector.evasive_rows`` / ``sample`` at every level in ``EVASION_LEVELS``; red's malicious rows use
+its current level per sensor (``evasion_idx``), which also scales its success odds by
+``1 - evasion_cost * s``. Ground-truth labels of a host's recent rows are revealed only when blue acts on it.
 """
 
 from __future__ import annotations
@@ -25,6 +30,11 @@ from cyberarena.arena.actions import BlueAction, RedAction
 MODELS: tuple[str, ...] = ("malware", "phishing", "network")
 M_IDX = {m: i for i, m in enumerate(MODELS)}
 ROLES = ("dmz", "workstation", "server")
+EVASION_LEVELS: tuple[float, ...] = tuple(round(0.1 * i, 1) for i in range(8))  # == ml.adaptive.EVASION_LEVELS
+# sensor that watches each red action (malicious rows of that action go to this model)
+ACTION_MODEL = {"recon": "network", "phish": "phishing", "exploit": "network", "escalate": "malware",
+                "lateral_move": "network", "exfiltrate": "network"}  # fmt: skip
+TRAIL_LEN = 24  # most recent rows per host whose labels a blue action can reveal
 NODE_FEATURES = ("compromised", "detected", "isolated", "patched", "privilege",
                  "score_malware", "score_phishing", "score_network")  # fmt: skip
 
@@ -53,6 +63,11 @@ class ArenaConfig:
     p_implant_leak: dict[str, float] = field(default_factory=lambda: {
         "malware": 0.2, "phishing": 0.05, "network": 0.1})  # fmt: skip
     phish_max_footholds: int = 1  # phishing is a re-entry tool: only offered while red holds <= this many
+    # v4: phishing emails are kept per host (incl. the lure behind red's starting foothold) and reviewed when
+    # blue investigates that host; confirming a phished foothold sweeps every mailbox for red's campaign.
+    # Changes only which labels blue's detectors learn from, never game play. False = v3 behaviour.
+    phish_forensics: bool = True
+    phish_campaign_size: int = 3  # phish_forensics: workstations that got the lure behind red's beachhead
     p_reset_evicts: float = 0.5  # reset_credentials on a privilege-1 foothold evicts it with this prob
     # reward shaping (red's view; blue receives the negation of red's progress terms)
     r_win: float = 1.0
@@ -64,10 +79,10 @@ class ArenaConfig:
     r_turn: float = 0.005  # red pays per turn (time pressure); blue earns it
     # blue-only terms
     r_isolate_true: float = 0.1
-    r_isolate_false: float = 0.1
+    r_isolate_false: float = 0.3  # v5 default; the "cheap-isolation" rules preset restores the earlier 0.1
     r_detect_true: float = 0.0  # monitor flags a truly compromised node
     r_detect_false: float = 0.0  # monitor flags a clean node (false positive)
-    r_isolated_upkeep: float = 0.01  # per isolated node per blue turn (business disruption)
+    r_isolated_upkeep: float = 0.03  # per isolated node per blue turn (business disruption); cheap-isolation: 0.01
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -172,21 +187,82 @@ def _bfs_dist(neighbors: list[np.ndarray], src: int) -> np.ndarray:
 
 
 class SensorPool:
-    """Pre-sampled, pre-scored classifier rows per (model, class)."""
+    """Pre-sampled, pre-scored classifier rows keyed by ``(model, class, evasion level index)``.
 
-    def __init__(self, classifiers: dict[str, Any], pool_size: int, seed: int):
-        self.rows: dict[tuple[str, int], np.ndarray] = {}
-        self.scores: dict[tuple[str, int], np.ndarray] = {}
+    Without detectors (v1 / ``--no-adaptive``): rows from ``clf.sample`` at level 0 only, exactly as before.
+    With adaptive detectors: benign rows from ``det.sample`` and malicious rows from ``det.evasive_rows`` at
+    every level; each level blends the *same* malicious/benign pairs, so a row at s=0.4 is the s=0 row moved
+    toward benign. Rows never change; ``rescore`` refreshes the scores after a detector update.
+
+    ``partition`` (v4, docs/contracts.md "Disjoint row partitions"): when the detectors implement
+    ``pool_rows(..., partition=)``, rows come from that disjoint partition (``arena_train`` for the training env,
+    ``arena_eval`` for the disguised-attacker eval env); otherwise the v3 ``sample`` / ``evasive_rows`` path.
+    """
+
+    def __init__(self, classifiers: dict[str, Any], pool_size: int, seed: int,
+                 detectors: dict[str, Any] | None = None, partition: str = "arena_train"):  # fmt: skip
+        self.rows: dict[tuple[str, int, int], np.ndarray] = {}
+        self.scores: dict[tuple[str, int, int], np.ndarray] = {}
+        self.version = {m: 0 for m in MODELS}
+        self._benign_sorted: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+        self.adaptive = detectors is not None
+        self.n_levels = len(EVASION_LEVELS) if self.adaptive else 1
+        self.partition: str | None = None  # set when the rows come from a disjoint pool_rows partition
         rng = np.random.default_rng(seed)
         for m in MODELS:
-            clf = classifiers[m]
-            for label in (0, 1):
-                X = np.asarray(clf.sample(label, pool_size, rng), dtype=np.float32)
-                self.rows[(m, label)] = X
-                self.scores[(m, label)] = np.asarray(clf.predict_proba(X), dtype=np.float64).reshape(-1)
+            if detectors is None:
+                clf = classifiers[m]
+                for label in (0, 1):
+                    X = np.asarray(clf.sample(label, pool_size, rng), dtype=np.float32)
+                    self.rows[(m, label, 0)] = X
+                    self.scores[(m, label, 0)] = np.asarray(clf.predict_proba(X), dtype=np.float64).reshape(-1)
+                continue
+            det = detectors[m]
+            if hasattr(det, "pool_rows"):
+                self.partition = partition
+            self.rows[(m, 0, 0)] = np.asarray(self._draw(det, 0, 0.0, pool_size, rng, partition), dtype=np.float32)
+            mal_seed = int(rng.integers(2**31))
+            for k, lvl in enumerate(EVASION_LEVELS):
+                X = self._draw(det, 1, lvl, pool_size, np.random.default_rng(mal_seed), partition)
+                self.rows[(m, 1, k)] = np.asarray(X, dtype=np.float32)
+            self.rescore(m, det)
 
-    def size(self, model: str, label: int) -> int:
-        return len(self.scores[(model, label)])
+    @staticmethod
+    def _draw(det: Any, label: int, level: float, n: int, rng: np.random.Generator, partition: str) -> np.ndarray:
+        if hasattr(det, "pool_rows"):
+            return det.pool_rows(label, level, n, rng, partition=partition)
+        if label == 0:  # v3 path (detectors without partitions)
+            return det.sample(0, n, rng)
+        return det.evasive_rows(label=1, level=level, n=n, rng=rng)
+
+    def keys(self, model: str) -> list[tuple[str, int, int]]:
+        return [(model, 0, 0)] + [(model, 1, k) for k in range(self.n_levels)]
+
+    def rescore(self, model: str, det: Any) -> None:
+        """Re-score every pool of ``model`` with the detector's current version in one batched predict."""
+        keys = self.keys(model)
+        p = np.asarray(det.predict_proba(np.concatenate([self.rows[k] for k in keys])), dtype=np.float64)
+        p = p.reshape(-1)
+        i = 0
+        for k in keys:
+            n = len(self.rows[k])
+            self.scores[k] = p[i:i + n]
+            i += n
+        self.version[model] = int(getattr(det, "version", 0))
+
+    def clean_quantile(self, model: str, x: np.ndarray) -> np.ndarray:
+        """Fraction of the current version's clean (benign-pool) scores below ``x``: where a reading sits in
+        that detector's clean-traffic distribution. Cached per version (a rescore replaces the array)."""
+        cache = self._benign_sorted
+        cur = self.scores[(model, 0, 0)]
+        hit = cache.get(model)
+        if hit is None or hit[0] is not cur:
+            hit = cache[model] = (cur, np.sort(cur))
+        srt = hit[1]
+        return np.searchsorted(srt, x, side="left") / max(1, len(srt))
+
+    def size(self, model: str, label: int, level: int = 0) -> int:
+        return len(self.scores[(model, label, level)])
 
 
 def load_default_classifiers() -> dict[str, Any]:
@@ -210,7 +286,9 @@ class CyberArenaEnv(gym.Env):
 
     def __init__(self, config: ArenaConfig | None = None, graph_seed: int = 0,
                  classifiers: dict[str, Any] | None = None, n_nodes: int | None = None,
-                 pool_seed: int | None = None):  # fmt: skip
+                 pool_seed: int | None = None, detectors: dict[str, Any] | None = None,
+                 evasion_cost: float = 0.0, adaptive_pool_size: int | None = None,
+                 partition: str = "arena_train"):  # fmt: skip
         super().__init__()
         self.cfg = config or ArenaConfig()
         self.graph = generate_graph(graph_seed, n_nodes)
@@ -225,9 +303,22 @@ class CyberArenaEnv(gym.Env):
         self.is_dmz = self.roles == "dmz"
         self.is_ws = self.roles == "workstation"
         self.is_srv = (self.roles == "server") & (np.arange(self.n) != self.crown)
-        self.classifiers = classifiers if classifiers is not None else load_default_classifiers()
-        self.pool = SensorPool(self.classifiers, self.cfg.pool_size,
-                               graph_seed + 1 if pool_seed is None else pool_seed)  # fmt: skip
+        if detectors is not None:
+            self.classifiers = detectors
+        else:
+            self.classifiers = classifiers if classifiers is not None else load_default_classifiers()
+        # adaptive pools are larger by default so detectors must generalise, not memorise the readings they see
+        size = self.cfg.pool_size if detectors is None or adaptive_pool_size is None else int(adaptive_pool_size)
+        self.pool = SensorPool(self.classifiers, size, graph_seed + 1 if pool_seed is None else pool_seed,
+                               detectors, partition=partition)  # fmt: skip
+        self.max_dist = max(1, int(self.dist_to_crown[self.dist_to_crown < 99].max()))
+        self.degree = self.adj.sum(axis=1).astype(np.int64)
+        self.evasion_cost = float(evasion_cost)
+        # red's evasion level index per sensor model for the current game (set by the trainer)
+        self.evasion_idx = np.zeros(len(MODELS), dtype=np.int64)
+        # how blue's features see detector scores: "raw" (default) or "clean_quantile" (diagnostic fix, see
+        # ``blue_scores``); game dynamics always use the raw scores
+        self.blue_score_view = "raw"
         self.action_space = spaces.Discrete(len(RedAction))  # current actor's; blue uses len(BlueAction)
         self.observation_space = spaces.Box(0.0, 2.0, shape=(self.n, len(NODE_FEATURES)), dtype=np.float32)
         self._init_state()
@@ -244,6 +335,16 @@ class CyberArenaEnv(gym.Env):
         self.known = np.zeros(n, dtype=bool)  # red's knowledge of the graph
         self.recon_done = np.zeros(n, dtype=bool)
         self.scores = np.zeros((n, len(MODELS)), dtype=np.float64)
+        self.confirmed = np.zeros(n, dtype=bool)  # blue proved a compromise here (until reimaged)
+        self.trail: list[deque] = [deque(maxlen=TRAIL_LEN) for _ in range(n)]
+        self.revealed: list[tuple[str, int, int, int]] = []  # (model, label, level, pool_index) this game
+        # phish_forensics: phishing rows each host received (kept outside the short trail) and red's campaign
+        self.mailbox: list[list[tuple[str, int, int, int]]] = [[] for _ in range(n)]
+        self.campaign: list[tuple[str, int, int, int]] = []
+        self.phished = np.zeros(n, dtype=bool)  # red's foothold here came from a phishing email
+        # what red's evasion bandit sees per sensor this game
+        self.red_stats = {m: {"n_act": 0, "n_leak": 0, "progress": 0.0, "caught": 0, "malicious": 0,
+                              "success": 0} for m in MODELS}  # fmt: skip
         self.turn = 0
         self.done = False
         self.winner: str | None = None
@@ -259,14 +360,57 @@ class CyberArenaEnv(gym.Env):
     def footholds(self) -> np.ndarray:
         return np.flatnonzero(self.compromised & ~self.isolated)
 
-    def _emit(self, node: int, model: str, label: int, log: list[dict] | None) -> float:
-        idx = int(self.np_random.integers(0, self.pool.size(model, label)))
-        score = float(self.pool.scores[(model, label)][idx])
+    def evasion(self, model: str) -> float:
+        return EVASION_LEVELS[int(self.evasion_idx[M_IDX[model]])]
+
+    def _evade(self, model: str) -> float:
+        """Success multiplier red pays for its current evasion on ``model``: ``1 - evasion_cost * s``."""
+        return 1.0 - self.evasion_cost * self.evasion(model)
+
+    def _emit(self, node: int, model: str, label: int, log: list[dict] | None, red: bool = False) -> float:
+        lvl = int(self.evasion_idx[M_IDX[model]]) if label == 1 else 0
+        idx = int(self.np_random.integers(0, self.pool.size(model, label, lvl)))
+        score = float(self.pool.scores[(model, label, lvl)][idx])
         self.scores[node, M_IDX[model]] = score
+        self.trail[node].append((model, label, lvl, idx))
+        if label == 1:
+            st = self.red_stats[model]
+            st["malicious"] += 1
+            st["caught"] += int(score > self.cfg.detect_threshold)
+            st["n_leak"] += int(not red)
         if log is not None:
-            log.append({"node": int(node), "model": model, "label": label, "pool_index": idx,
-                        "score": round(score, 4)})  # fmt: skip
+            log.append({"node": int(node), "model": model, "label": label, "level": lvl, "pool_index": idx,
+                        "score": round(score, 4), "evasion": EVASION_LEVELS[lvl],
+                        "version": self.pool.version[model]})  # fmt: skip
         return score
+
+    def _reveal(self, node: int, sweep: bool = False) -> None:
+        """Blue acted on ``node``: the true labels of its recent rows become training data.
+
+        With ``phish_forensics`` the investigation also reviews the host's mailbox, and ``sweep`` (blue just
+        proved a foothold that red entered by phishing) searches every mailbox for red's campaign: all phishing
+        emails red sent this game are revealed."""
+        trail = list(self.trail[node])
+        self.revealed.extend(trail)
+        self.trail[node].clear()
+        if not self.cfg.phish_forensics:
+            return
+        seen = set(trail)
+        extra = list(self.mailbox[node]) + (list(self.campaign) if sweep else [])
+        for item in extra:
+            if item not in seen:
+                self.revealed.append(item)
+                seen.add(item)
+        self.mailbox[node].clear()
+        if sweep:
+            for box in self.mailbox:
+                box.clear()
+            self.campaign.clear()
+
+    def _mail(self, node: int, item: tuple[str, int, int, int]) -> None:
+        self.mailbox[node].append(item)
+        if item[1] == 1:
+            self.campaign.append(item)
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
@@ -278,6 +422,17 @@ class CyberArenaEnv(gym.Env):
         start = int(self.np_random.choice(np.flatnonzero(self.is_ws)))
         self.compromised[start] = True
         self.privilege[start] = 1
+        if self.cfg.phish_forensics:
+            # the lure behind red's beachhead sits in that host's mailbox, at red's current phishing disguise.
+            # Own RNG stream and no score change, so game play is identical with the flag off.
+            frng = np.random.default_rng([0 if seed is None else int(seed), 0xF15])
+            lvl = int(self.evasion_idx[M_IDX["phishing"]])
+            self.phished[start] = True
+            ws = np.flatnonzero(self.is_ws & (np.arange(self.n) != start))
+            k = min(len(ws), max(0, self.cfg.phish_campaign_size - 1))
+            others = [int(v) for v in frng.choice(ws, size=k, replace=False)] if k else []
+            for v in [start, *others]:  # the campaign went to several staff; only ``start`` clicked
+                self._mail(v, ("phishing", 1, lvl, int(frng.integers(0, self.pool.size("phishing", 1, lvl)))))
         self.known[:] = self.is_dmz | self.is_ws  # DMZ is public; staff directory is phishable
         self.known[self.nbrs[start]] = True
         self.known[start] = True
@@ -286,6 +441,18 @@ class CyberArenaEnv(gym.Env):
     def observation(self) -> np.ndarray:
         return np.column_stack([self.compromised, self.detected, self.isolated, self.patched,
                                 self.privilege, self.scores]).astype(np.float32)  # fmt: skip
+
+    def blue_scores(self) -> np.ndarray:
+        """Detector scores as blue's features see them. ``raw``: ``self.scores``. ``clean_quantile``: each score
+        replaced by its quantile among the current detector version's clean-pool scores, so a clean host's
+        reading has the same distribution whatever the version (blue calibrates each detector on known-clean
+        traffic); a retrained detector no longer shifts the inputs under blue's Q-network."""
+        if self.blue_score_view == "raw":
+            return self.scores
+        out = np.empty_like(self.scores)
+        for k, m in enumerate(MODELS):
+            out[:, k] = self.pool.clean_quantile(m, self.scores[:, k])
+        return out
 
     def node_states(self) -> list[dict[str, Any]]:
         out = []
@@ -298,7 +465,8 @@ class CyberArenaEnv(gym.Env):
 
     def classifier_row(self, entry: dict) -> list[float]:
         """Feature row behind a classifier_inputs entry produced by ``step``."""
-        return self.pool.rows[(entry["model"], entry["label"])][entry["pool_index"]].tolist()
+        key = (entry["model"], entry["label"], entry.get("level", 0))
+        return self.pool.rows[key][entry["pool_index"]].tolist()
 
     # -- candidates --------------------------------------------------------------------------------
 
@@ -358,6 +526,33 @@ class CyberArenaEnv(gym.Env):
         enum = RedAction if side == "red" else BlueAction
         return [int(a) for a in enum if self.candidates(side, int(a))]
 
+    def all_candidates(self, side: str) -> list[tuple[int, int | None, int | None]]:
+        """Every legal concrete move ``(action, source, target)`` for ``side`` (v4 DQN agents score these)."""
+        enum = RedAction if side == "red" else BlueAction
+        return [(int(a), s, t) for a in enum for s, t in self.candidates(side, int(a))]
+
+    # -- snapshots (probe states, tests) ------------------------------------------------------------
+
+    SNAPSHOT_FIELDS: ClassVar[tuple[str, ...]] = ("compromised", "detected", "isolated", "patched", "privilege",
+                                                  "known", "recon_done", "scores", "confirmed", "phished",
+                                                  "evasion_idx")  # fmt: skip
+
+    def snapshot(self) -> dict[str, Any]:
+        """Game state as plain lists (JSON-safe). Sensor trails / mailboxes are not part of it."""
+        snap: dict[str, Any] = {k: getattr(self, k).tolist() for k in self.SNAPSHOT_FIELDS}
+        snap["turn"] = int(self.turn)
+        return snap
+
+    def restore(self, snap: dict[str, Any]) -> None:
+        """Set the game state from ``snapshot()`` output (missing fields keep their current value)."""
+        for k in self.SNAPSHOT_FIELDS:
+            if k in snap:
+                cur = getattr(self, k)
+                cur[...] = np.asarray(snap[k], dtype=cur.dtype).reshape(cur.shape)
+        self.turn = int(snap.get("turn", self.turn))
+        self.done = False
+        self.winner = None
+
     def default_target(self, side: str, action: int) -> tuple[int | None, int | None]:
         """Deterministic-ish target rule used when ``step`` gets a bare action index."""
         cands = self.candidates(side, action)
@@ -412,52 +607,62 @@ class CyberArenaEnv(gym.Env):
         if side == "red":
             act = RedAction(a)
             aid = act.action_id
+            red_before = r["red"]
             if act == RedAction.RECON:
                 success = True
                 self.recon_done[tgt] = True
                 newly = self.nbrs[tgt][~self.known[self.nbrs[tgt]]]
                 self.known[self.nbrs[tgt]] = True
                 events.append(f"discovered:{len(newly)}")
-                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted)
+                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted, red=True)
             elif act == RedAction.PHISH:
-                success = rng.random() < cfg.p_phish
+                success = rng.random() < cfg.p_phish * self._evade("phishing")
                 if success:
                     gain_foothold(tgt, 1)
-                self._emit(tgt, "phishing", int(rng.random() < cfg.noise[aid]), emitted)
+                    self.phished[tgt] = True
+                self._emit(tgt, "phishing", int(rng.random() < cfg.noise[aid]), emitted, red=True)
+                if cfg.phish_forensics:
+                    self._mail(tgt, self.trail[tgt][-1])
             elif act == RedAction.EXPLOIT:
                 p = cfg.p_exploit_patched if self.patched[tgt] else cfg.p_exploit
                 if src is not None and self.recon_done[src]:
                     p += cfg.p_exploit_recon_bonus
-                success = rng.random() < p
+                success = rng.random() < p * self._evade("network")
                 if success:
                     gain_foothold(tgt, 1)
-                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted)
+                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted, red=True)
             elif act == RedAction.ESCALATE:
                 p = cfg.p_escalate_patched if self.patched[tgt] else cfg.p_escalate
-                success = rng.random() < p
+                success = rng.random() < p * self._evade("malware")
                 if success:
                     self.privilege[tgt] = 2
                     progress(cfg.r_privilege * (3.0 if tgt == self.crown else 1.0))
-                self._emit(tgt, "malware", int(rng.random() < cfg.noise[aid]), emitted)
+                self._emit(tgt, "malware", int(rng.random() < cfg.noise[aid]), emitted, red=True)
             elif act == RedAction.LATERAL_MOVE:
-                success = rng.random() < cfg.p_lateral
+                success = rng.random() < cfg.p_lateral * self._evade("network")
                 if success:
                     gain_foothold(tgt, 1)
-                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted)
+                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted, red=True)
             elif act == RedAction.EXFILTRATE:
-                success = rng.random() < cfg.p_exfiltrate
-                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted)
+                success = rng.random() < cfg.p_exfiltrate * self._evade("network")
+                self._emit(tgt, "network", int(rng.random() < cfg.noise[aid]), emitted, red=True)
                 if success:
                     self.done = True
                     self.winner = "red"
             else:  # wait
                 success = True
+            if aid in ACTION_MODEL:
+                st = self.red_stats[ACTION_MODEL[aid]]
+                st["n_act"] += 1
+                st["success"] += int(success)
+                st["progress"] += r["red"] - red_before + (cfg.r_win if self.winner == "red" else 0.0)
             progress(-cfg.r_turn)
         else:
             act = BlueAction(a)
             aid = act.action_id
             if act == BlueAction.MONITOR:
                 hit = False
+                reveal = bool(self.confirmed[tgt])
                 for m in MODELS:
                     label = int(self.compromised[tgt] and rng.random() < cfg.p_implant_leak[m])
                     hit |= self._emit(tgt, m, label, emitted) > cfg.detect_threshold
@@ -467,9 +672,14 @@ class CyberArenaEnv(gym.Env):
                     self.detected[tgt] = True
                     events.append(f"flagged:{tgt}")
                 success = hit
+                if reveal:  # watching a host already proven compromised: its readings are labelled
+                    self._reveal(tgt, sweep=bool(self.phished[tgt]))
             elif act == BlueAction.ISOLATE:
+                # forensics on the isolated host
+                self._reveal(tgt, sweep=bool(self.compromised[tgt] and self.phished[tgt]))
                 self.isolated[tgt] = True
                 success = bool(self.compromised[tgt])
+                self.confirmed[tgt] |= success
                 if success:
                     lose_foothold(tgt)
                     r["blue"] += cfg.r_isolate_true
@@ -480,15 +690,19 @@ class CyberArenaEnv(gym.Env):
                 success = True
             elif act == BlueAction.RESTORE:
                 # reimage: clean node rejoins the network; red's foothold there (if any) is wiped
+                self._reveal(tgt, sweep=bool(self.confirmed[tgt] and self.phished[tgt]))
+                self.confirmed[tgt] = False
                 self.isolated[tgt] = False
                 self.detected[tgt] = False
                 self.compromised[tgt] = False
+                self.phished[tgt] = False
                 self.privilege[tgt] = 0
                 self.patched[tgt] = True
                 for m in MODELS:
                     self._emit(tgt, m, 0, emitted)
                 success = True
             elif act == BlueAction.RESET_CREDENTIALS:
+                was_phished = bool(self.phished[tgt])
                 success = False
                 if self.compromised[tgt]:
                     if self.privilege[tgt] >= 2:
@@ -498,8 +712,11 @@ class CyberArenaEnv(gym.Env):
                     elif rng.random() < cfg.p_reset_evicts:
                         self.compromised[tgt] = False
                         self.privilege[tgt] = 0
+                        self.phished[tgt] = False
                         lose_foothold(tgt)
                         success = True
+                self._reveal(tgt, sweep=success and was_phished)  # no RNG use: order vs. the reset is irrelevant
+                self.confirmed[tgt] |= success
                 self.detected[tgt] = False if not self.compromised[tgt] else self.detected[tgt]
             r["blue"] -= cfg.r_isolated_upkeep * float(self.isolated.sum())
 
