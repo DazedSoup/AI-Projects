@@ -415,7 +415,8 @@ def build_train_args(
     """Arguments after ``python -m cyberarena.arena.train`` for the given form values.
 
     * ``target: "cli"`` params that differ from their default become ``flag value``; a bool becomes the bare
-      flag when true; a nullable param left on "random" (``None``) is omitted.
+      flag when true (and ``flag_false``, e.g. ``--no-adaptive``, when false); a nullable param left on
+      "random" (``None``) is omitted.
     * ``target: "env"`` params that differ go into one ``--env-json`` object with their (possibly dotted) key.
     * ``init_side`` (memory group) is only sent with ``--init-from``, and then always explicitly.
     """
@@ -440,6 +441,8 @@ def build_train_args(
         if p.get("type") == "bool":
             if v:
                 args.append(flag)
+            elif p.get("flag_false"):  # e.g. --no-adaptive for a default-true bool
+                args.append(p["flag_false"])
         elif v is not None:
             args += [flag, _fmt(v)]
     if env:
@@ -547,7 +550,7 @@ def pid_alive(pid: Any) -> bool:
     return True
 
 
-KILLABLE_MODULES = (RUNNER_MODULE, "cyberarena.arena.train")
+KILLABLE_MODULES = (RUNNER_MODULE, "cyberarena.arena.train", "cyberarena.arena.experiment")
 
 
 def process_cmdline(pid: int) -> str | None:
@@ -954,5 +957,113 @@ def default_replay_run(runs: list[Path]) -> int:
 
 
 def has_agents(run_dir: Path) -> bool:
+    """Saved learners to warm-start from: tabular Q-tables (``agents/{side}.json``) or DQN Q-networks
+    (``agents/{side}_qnet.keras``)."""
     a = Path(run_dir) / "agents"
-    return (a / "red.json").exists() or (a / "blue.json").exists()
+    return any((a / f"{side}{suffix}").exists() for side in ("red", "blue") for suffix in (".json", "_qnet.keras"))
+
+
+def agent_type(run_dir: Path) -> str | None:
+    """``"dqn"``, ``"tabular"`` or ``None`` (unknown), from ``config.json`` or the saved agent files."""
+    cfg = read_json(Path(run_dir) / CONFIG_FILE) or {}
+    t = (cfg.get("agents") or {}).get("type") if isinstance(cfg.get("agents"), dict) else None
+    if t:
+        return str(t)
+    a = Path(run_dir) / "agents"
+    if (a / "red_qnet.keras").exists() or (a / "blue_qnet.keras").exists():
+        return "dqn"
+    if (a / "red.json").exists() or (a / "blue.json").exists():
+        return "tabular"
+    return None
+
+
+# ============================================================================================== experiments
+
+EXPERIMENT_MODULE = "cyberarena.arena.experiment"
+EXPERIMENT_CONDITIONS = ("adaptive", "frozen")
+# flags the experiment sets per run itself, so they are never forwarded from the form
+_EXPERIMENT_OWNED = {"--episodes", "--label", "--runs-dir", "--init-from", "--init-side", "--seed", "--adaptive",
+                     "--no-adaptive", "--detectors"}  # fmt: skip
+
+
+def seeds_arg(first: int, last: int) -> str:
+    first, last = int(first), int(last)
+    return str(first) if first == last else f"{min(first, last)}-{max(first, last)}"
+
+
+def experiment_extra_args(train_args: list[str]) -> list[str]:
+    """Form-derived train args minus the ones the experiment sets per run (seed, episodes, label, detectors…)."""
+    out, i = [], 0
+    while i < len(train_args):
+        a = train_args[i]
+        takes_value = i + 1 < len(train_args) and not train_args[i + 1].startswith("--")
+        if a in _EXPERIMENT_OWNED:
+            i += 2 if takes_value and a not in ("--adaptive", "--no-adaptive") else 1
+            continue
+        out.append(a)
+        if takes_value:
+            out.append(train_args[i + 1])
+            i += 2
+        else:
+            i += 1
+    return out
+
+
+def valid_experiment_name(name: str, runs_dir: Path) -> str | None:
+    """``None`` if ``name`` can be used, else why not."""
+    name = (name or "").strip()
+    if not name:
+        return "Give the experiment a name."
+    if any(c in name for c in '/\\:*?"<>| ') or name.startswith("."):
+        return "Use letters, digits, '-' and '_' only."
+    if (Path(runs_dir) / "experiments" / name / "manifest.json").exists():
+        return f"An experiment called '{name}' already exists."
+    return None
+
+
+def experiment_cmd(name: str, seeds: str, conditions: list[str], episodes: int, *, jobs: int | None = None,
+                   extra: list[str] | None = None, runs_dir: Path | None = None,
+                   python: str | None = None) -> list[str]:  # fmt: skip
+    cmd = [python or sys.executable, "-m", EXPERIMENT_MODULE, "--name", name, "--seeds", seeds,
+           "--conditions", ",".join(conditions), "--episodes", str(int(episodes))]  # fmt: skip
+    if jobs:
+        cmd += ["--jobs", str(int(jobs))]
+    if runs_dir is not None:
+        cmd += ["--runs-dir", str(Path(runs_dir))]
+    if extra:
+        cmd += ["--", *extra]
+    if "--online" in cmd:  # pragma: no cover - guard
+        raise ValueError("--online is never passed by the Lab")
+    return cmd
+
+
+def launch_experiment(runs_dir: Path, name: str, cmd: list[str], *, python: str | None = None,
+                      cwd: Path | None = None) -> dict:  # fmt: skip
+    """Start an experiment through the detached runner (so Stop can deliver CTRL_BREAK to it). Refuses while
+    another Lab job is active: the experiment uses most CPU cores."""
+    busy = active_job(runs_dir)
+    if busy:
+        raise LabBusyError(f"a Lab job is already active ({busy.get('run_id') or busy.get('exp_name') or busy.get('token')})")
+    if "--online" in cmd:
+        raise ValueError("--online is never passed by the Lab")
+    py = python or sys.executable
+    token = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+    path = job_path(runs_dir, token)
+    job = {"token": token, "job_file": str(path), "kind": "experiment", "created": now_iso(), "started": now_iso(),
+           "stage": "starting", "message": "Starting the experiment…", "pid": None, "train_pid": None,
+           "run_dir": None, "run_id": None, "exp_name": name, "exp_dir": str(Path(runs_dir) / "experiments" / name),
+           "label": f"experiment {name}", "python": py, "cwd": str(cwd) if cwd else None, "train_cmd": cmd,
+           "enrich": False}  # fmt: skip
+    save_job(job)
+    runner = [py, "-m", RUNNER_MODULE, "--job", str(path)]
+    try:
+        proc = subprocess.Popen(runner, cwd=str(cwd) if cwd else None, env=child_env(), **detached_kwargs())
+    except OSError as e:
+        job.update(stage="error", message=f"Could not start the runner: {e}")
+        save_job(job)
+        return job
+    cur = read_json(path) or job
+    if cur.get("pid") is None:
+        cur["pid"] = proc.pid
+        save_job(cur)
+    return cur

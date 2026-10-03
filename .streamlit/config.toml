@@ -1,0 +1,70 @@
+# cyberarena dashboard theme (owner: dashboard-builder). Dark-first "security operations console".
+# Custom CSS lives in src/cyberarena/dashboard/theme.py; chart styling in its Plotly templates.
+
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "viewer"
+
+[theme]
+base = "dark"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap, 'Segoe UI', system-ui, sans-serif"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap, Consolas, ui-monospace, monospace"
+baseFontSize = 14
+baseRadius = "8px"
+buttonRadius = "8px"
+showWidgetBorder = true
+showSidebarBorder = true
+headingFontWeights = [650, 620, 600, 600, 600, 600]
+headingFontSizes = ["1.75rem", "1.25rem", "1.0625rem", "0.9375rem", "0.875rem", "0.8125rem"]
+metricValueFontWeight = 600
+
+[theme.dark]
+primaryColor = "#2BC0AE"
+backgroundColor = "#0B0E14"
+secondaryBackgroundColor = "#161C27"
+textColor = "#E8EBF1"
+borderColor = "#262E3B"
+dataframeBorderColor = "#222935"
+dataframeHeaderBackgroundColor = "#121722"
+linkColor = "#7FD9CD"
+codeBackgroundColor = "#121722"
+redColor = "#E5484D"
+blueColor = "#3E8BFF"
+violetColor = "#8E7CFF"
+greenColor = "#2BB673"
+orangeColor = "#E8853A"
+yellowColor = "#C98500"
+grayColor = "#7D8597"
+chartCategoricalColors = ["#3E8BFF", "#E5484D", "#8E7CFF", "#C98500", "#199E70"]
+
+[theme.dark.sidebar]
+backgroundColor = "#0F131B"
+secondaryBackgroundColor = "#161C27"
+borderColor = "#222935"
+
+[theme.light]
+primaryColor = "#0E8A7C"
+backgroundColor = "#F4F5F8"
+secondaryBackgroundColor = "#FFFFFF"
+textColor = "#0E1320"
+borderColor = "#D8DCE4"
+dataframeBorderColor = "#E3E6EC"
+dataframeHeaderBackgroundColor = "#F7F8FA"
+linkColor = "#0B7366"
+codeBackgroundColor = "#EEF0F4"
+redColor = "#E5484D"
+blueColor = "#3E8BFF"
+violetColor = "#8E7CFF"
+greenColor = "#1E9A5E"
+orangeColor = "#D2701F"
+yellowColor = "#B37400"
+grayColor = "#687083"
+chartCategoricalColors = ["#3E8BFF", "#E5484D", "#8E7CFF", "#EDA100", "#1BAF7A"]
+
+[theme.light.sidebar]
+backgroundColor = "#ECEEF2"
+secondaryBackgroundColor = "#FFFFFF"
+borderColor = "#D8DCE4"

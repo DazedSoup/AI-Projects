@@ -60,6 +60,10 @@ def _lab(fake, monkeypatch):
     return at
 
 
+def html(at) -> str:
+    return " ".join(str(e.value) for e in at.get("html"))
+
+
 def _ok(at):
     assert not at.exception, [e.value for e in at.exception]
 
@@ -67,17 +71,16 @@ def _ok(at):
 def test_lab_renders_form_from_spec(runs, monkeypatch):
     fake = FakeSubprocess()
     at = _lab(fake, monkeypatch)
-    assert at.title[0].value == "Simulation Lab"
+    assert "<h1>Simulation Lab</h1>" in html(at)
     assert fake.runs and fake.runs[0][-1] == "--describe-params"
-    labels = [e.label for e in at.expander]
-    assert {"Network", "Red", "Blue", "Opponents", "Training"} <= set(labels)
-    assert any(lb.startswith("Advanced") for lb in labels)
+    assert {"Network", "Red", "Blue", "Opponents", "Training"} <= {t.label for t in at.tabs}
+    assert any(e.label.startswith("Advanced") for e in at.expander)
     assert at.slider(key="lab_w:p_phish").value == 0.35
     assert at.checkbox(key="lab_r:n_nodes").value is True  # nullable default null -> random
     assert at.toggle(key="lab_w:no_turn_log").value is False
     assert at.selectbox(key="lab_w:baseline").value == "heuristic"
     assert at.number_input(key="lab_w:seed").value == 7
-    assert [b.label for b in at.button][:4] == list(lab.PRESETS)
+    assert at.segmented_control(key="lab_preset_sel").options == list(lab.PRESETS)
     # the replay fixture run shows up in the history table
     assert "20260101-000000-1" in at.dataframe[0].value["run_id"].tolist()
 
@@ -87,12 +90,12 @@ def test_lab_change_slider_and_run_builds_command(runs, monkeypatch):
     at = _lab(fake, monkeypatch)
     at.slider(key="lab_w:p_phish").set_value(0.5).run()
     _ok(at)
-    assert any("●] changed (default 0.35)" in c.value for c in at.caption)
-    assert any("● 1 changed" in e.label for e in at.expander)
+    assert any("●] changed (default 35%)" in c.value for c in at.caption)  # percent-formatted
+    assert "<b>1 changed</b>" in html(at) and "<b>Red</b> 1" in html(at)
     at.checkbox(key="lab_r:n_nodes").uncheck().run()
     at.slider(key="lab_w:n_nodes").set_value(12).run()
     at.selectbox(key="lab_w:baseline").set_value("random").run()
-    at.button(key="lab_preset:Quick test").click().run()  # keeps the changes above
+    at.segmented_control(key="lab_preset_sel").set_value("Quick test").run()  # keeps the changes above
     at.text_input(key="lab_label").input("phish up").run()
     _ok(at)
     assert at.slider(key="lab_w:p_phish").value == 0.5
@@ -131,10 +134,12 @@ def test_lab_running_job_shows_progress_and_blocks_second_run(runs, monkeypatch)
            "run_id": run_dir.name, "label": "live"}  # fmt: skip
     lab.save_job(job)
     at = _lab(fake, monkeypatch)
-    assert any("Running: live" in m.value for m in at.markdown)
+    assert "Running: live" in html(at)
     metrics = {m.label: m.value for m in at.metric}
-    assert metrics["Episode"] == "150 / 300"
-    assert metrics["Learned red vs baseline"] == "62%" and metrics["Learned blue vs baseline"] == "44%"
+    assert metrics["Game"] == "150 / 300"
+    assert (
+        metrics["Learned red vs scripted blue"] == "62%" and metrics["Learned blue vs scripted red"] == "44%"
+    )
     assert metrics["Stage"] == "training · train"
     assert at.button(key="lab_run").disabled
     at.button(key="lab_stop").click().run()
@@ -159,7 +164,7 @@ def test_lab_finished_job_opens_in_replay(runs, monkeypatch):
     assert any("fixture" in s.value and "finished" in s.value for s in at.success)
     at.button(key="lab_open_new").click().run()
     _ok(at)
-    assert at.title[0].value == "Episode 5"  # replay page, with the run selected
+    assert "<h1>Replay</h1>" in html(at)  # replay page, with the run selected
     assert at.session_state["run"] == run_dir
 
 

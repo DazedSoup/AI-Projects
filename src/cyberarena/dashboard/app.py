@@ -1,20 +1,38 @@
-"""cyberarena dashboard (simulation only): Replay and Simulation Lab.
+"""cyberarena dashboard (simulation only).
 
 Launch:  .venv/Scripts/python.exe -m streamlit run src/cyberarena/dashboard/app.py
 
-* **Replay** (``replay_page.py``, default): reads run logs, never runs agents or calls APIs.
-* **Simulation Lab** (``lab_page.py``): builds a form from ``train --describe-params``, launches training plus
-  offline enrichment as a detached subprocess, shows live progress and compares runs.
+Pages (top navigation, in this order):
 
-Runs are discovered under ``cyberarena.config.RUNS_DIR`` (override the root with ``CYBERARENA_ROOT``).
+* **Overview** (``overview_page.py``): headline metrics and charts for the selected run.
+* **Replay** (``replay_page.py``): step through one game on the 3D network, with the move log and the
+  reasoning behind each move; compare the same probe game at two checkpoints.
+* **Learning** (``learning_page.py``): how the detectors and the agents learned, from ``learning.jsonl``.
+* **Evidence** (``evidence_page.py``): multi-seed experiments: adaptive vs frozen contrasts with intervals and
+  paired p-values, per-seed curves, the arms race across seeds, factorial diagnoses.
+* **Simulation Lab** (``lab_page.py``): launch, watch and compare training runs (subprocesses only).
+
+One run selector in the sidebar (``common.run_selector``) drives every page. The dashboard only reads run
+files; it never imports arena, ml or explain code. Runs are found under ``cyberarena.config.RUNS_DIR``
+(override the root with ``CYBERARENA_ROOT``).
 """
 
 from __future__ import annotations
 
 import streamlit as st
 
-st.set_page_config(page_title="cyberarena", layout="wide")
+from cyberarena.dashboard import common, theme
 
-REPLAY = st.Page("replay_page.py", title="Replay", icon=":material/replay:", default=True)
-LAB = st.Page("lab_page.py", title="Simulation Lab", icon=":material/science:")
-st.navigation([REPLAY, LAB]).run()
+st.set_page_config(page_title="cyberarena", layout="wide", page_icon=":material/shield:")
+theme.inject()
+
+PAGES = [
+    st.Page(common.PAGES["overview"], title="Overview", icon=":material/space_dashboard:", default=True),
+    st.Page(common.PAGES["replay"], title="Replay", icon=":material/play_circle:", url_path="replay"),
+    st.Page(common.PAGES["learning"], title="Learning", icon=":material/neurology:", url_path="learning"),
+    st.Page(common.PAGES["evidence"], title="Evidence", icon=":material/fact_check:", url_path="evidence"),
+    st.Page(common.PAGES["lab"], title="Simulation Lab", icon=":material/science:", url_path="lab"),
+]
+nav = st.navigation(PAGES, position="top")
+common.run_selector()
+nav.run()

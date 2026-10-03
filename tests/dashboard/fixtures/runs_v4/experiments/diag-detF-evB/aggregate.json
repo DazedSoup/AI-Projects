@@ -1,0 +1,1229 @@
+{
+ "name": "diag-detF-evB",
+ "generated": "2026-10-03T05:31:12",
+ "episodes": 2000,
+ "n_seeds": 5,
+ "conditions": [
+  "adaptive"
+ ],
+ "runs_used": {
+  "adaptive": [
+   1,
+   2,
+   3,
+   4,
+   5
+  ]
+ },
+ "runs_failed": [],
+ "curves": {
+  "adaptive": {
+   "blue_learned_vs_red_baseline": [
+    {
+     "after_episode": 0,
+     "mean": 0.131,
+     "sd": 0.1874,
+     "ci95": [
+      -0.1017,
+      0.3637
+     ],
+     "n": 5,
+     "per_seed": [
+      0.45,
+      0.0,
+      0.065,
+      0.14,
+      0.0
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 250,
+     "mean": 0.21,
+     "sd": 0.1907,
+     "ci95": [
+      -0.0267,
+      0.4467
+     ],
+     "n": 5,
+     "per_seed": [
+      0.1,
+      0.31,
+      0.07,
+      0.5,
+      0.07
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 500,
+     "mean": 0.222,
+     "sd": 0.0803,
+     "ci95": [
+      0.1223,
+      0.3217
+     ],
+     "n": 5,
+     "per_seed": [
+      0.355,
+      0.165,
+      0.23,
+      0.155,
+      0.205
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 750,
+     "mean": 0.166,
+     "sd": 0.1058,
+     "ci95": [
+      0.0346,
+      0.2974
+     ],
+     "n": 5,
+     "per_seed": [
+      0.06,
+      0.17,
+      0.325,
+      0.08,
+      0.195
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1000,
+     "mean": 0.502,
+     "sd": 0.1571,
+     "ci95": [
+      0.307,
+      0.697
+     ],
+     "n": 5,
+     "per_seed": [
+      0.665,
+      0.36,
+      0.645,
+      0.325,
+      0.515
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1250,
+     "mean": 0.768,
+     "sd": 0.1179,
+     "ci95": [
+      0.6216,
+      0.9144
+     ],
+     "n": 5,
+     "per_seed": [
+      0.71,
+      0.8,
+      0.895,
+      0.595,
+      0.84
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1500,
+     "mean": 0.821,
+     "sd": 0.068,
+     "ci95": [
+      0.7366,
+      0.9054
+     ],
+     "n": 5,
+     "per_seed": [
+      0.73,
+      0.885,
+      0.875,
+      0.845,
+      0.77
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1750,
+     "mean": 0.858,
+     "sd": 0.0404,
+     "ci95": [
+      0.8078,
+      0.9082
+     ],
+     "n": 5,
+     "per_seed": [
+      0.825,
+      0.82,
+      0.855,
+      0.87,
+      0.92
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 2000,
+     "mean": 0.844,
+     "sd": 0.0354,
+     "ci95": [
+      0.8,
+      0.888
+     ],
+     "n": 5,
+     "per_seed": [
+      0.8,
+      0.865,
+      0.855,
+      0.885,
+      0.815
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    }
+   ],
+   "blue_learned_vs_red_evasive@0.4": [
+    {
+     "after_episode": 0,
+     "mean": 0.148,
+     "sd": 0.2304,
+     "ci95": [
+      -0.138,
+      0.434
+     ],
+     "n": 5,
+     "per_seed": [
+      0.55,
+      0.0,
+      0.07,
+      0.12,
+      0.0
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 250,
+     "mean": 0.252,
+     "sd": 0.2023,
+     "ci95": [
+      0.0008,
+      0.5032
+     ],
+     "n": 5,
+     "per_seed": [
+      0.15,
+      0.47,
+      0.12,
+      0.47,
+      0.05
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 500,
+     "mean": 0.222,
+     "sd": 0.0733,
+     "ci95": [
+      0.131,
+      0.313
+     ],
+     "n": 5,
+     "per_seed": [
+      0.32,
+      0.14,
+      0.27,
+      0.17,
+      0.21
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 750,
+     "mean": 0.21,
+     "sd": 0.0731,
+     "ci95": [
+      0.1192,
+      0.3008
+     ],
+     "n": 5,
+     "per_seed": [
+      0.14,
+      0.22,
+      0.29,
+      0.13,
+      0.27
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1000,
+     "mean": 0.566,
+     "sd": 0.1604,
+     "ci95": [
+      0.3668,
+      0.7652
+     ],
+     "n": 5,
+     "per_seed": [
+      0.74,
+      0.39,
+      0.65,
+      0.4,
+      0.65
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1250,
+     "mean": 0.826,
+     "sd": 0.0434,
+     "ci95": [
+      0.7722,
+      0.8798
+     ],
+     "n": 5,
+     "per_seed": [
+      0.88,
+      0.82,
+      0.83,
+      0.76,
+      0.84
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1500,
+     "mean": 0.85,
+     "sd": 0.0608,
+     "ci95": [
+      0.7745,
+      0.9255
+     ],
+     "n": 5,
+     "per_seed": [
+      0.78,
+      0.92,
+      0.85,
+      0.9,
+      0.8
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1750,
+     "mean": 0.904,
+     "sd": 0.0297,
+     "ci95": [
+      0.8672,
+      0.9408
+     ],
+     "n": 5,
+     "per_seed": [
+      0.89,
+      0.87,
+      0.91,
+      0.9,
+      0.95
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 2000,
+     "mean": 0.906,
+     "sd": 0.0261,
+     "ci95": [
+      0.8736,
+      0.9384
+     ],
+     "n": 5,
+     "per_seed": [
+      0.92,
+      0.94,
+      0.88,
+      0.91,
+      0.88
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    }
+   ],
+   "blue_learned_vs_red_evasive@0.7": [
+    {
+     "after_episode": 0,
+     "mean": 0.094,
+     "sd": 0.1665,
+     "ci95": [
+      -0.1128,
+      0.3008
+     ],
+     "n": 5,
+     "per_seed": [
+      0.39,
+      0.01,
+      0.02,
+      0.05,
+      0.0
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 250,
+     "mean": 0.242,
+     "sd": 0.1385,
+     "ci95": [
+      0.0701,
+      0.4139
+     ],
+     "n": 5,
+     "per_seed": [
+      0.19,
+      0.41,
+      0.26,
+      0.31,
+      0.04
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 500,
+     "mean": 0.17,
+     "sd": 0.0592,
+     "ci95": [
+      0.0965,
+      0.2435
+     ],
+     "n": 5,
+     "per_seed": [
+      0.22,
+      0.16,
+      0.24,
+      0.13,
+      0.1
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 750,
+     "mean": 0.134,
+     "sd": 0.0647,
+     "ci95": [
+      0.0537,
+      0.2143
+     ],
+     "n": 5,
+     "per_seed": [
+      0.06,
+      0.1,
+      0.23,
+      0.16,
+      0.12
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1000,
+     "mean": 0.524,
+     "sd": 0.144,
+     "ci95": [
+      0.3452,
+      0.7028
+     ],
+     "n": 5,
+     "per_seed": [
+      0.69,
+      0.39,
+      0.56,
+      0.36,
+      0.62
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1250,
+     "mean": 0.798,
+     "sd": 0.0581,
+     "ci95": [
+      0.7259,
+      0.8701
+     ],
+     "n": 5,
+     "per_seed": [
+      0.86,
+      0.77,
+      0.79,
+      0.72,
+      0.85
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1500,
+     "mean": 0.818,
+     "sd": 0.0585,
+     "ci95": [
+      0.7454,
+      0.8906
+     ],
+     "n": 5,
+     "per_seed": [
+      0.78,
+      0.92,
+      0.81,
+      0.78,
+      0.8
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1750,
+     "mean": 0.884,
+     "sd": 0.0344,
+     "ci95": [
+      0.8413,
+      0.9267
+     ],
+     "n": 5,
+     "per_seed": [
+      0.9,
+      0.83,
+      0.87,
+      0.91,
+      0.91
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 2000,
+     "mean": 0.862,
+     "sd": 0.0327,
+     "ci95": [
+      0.8214,
+      0.9026
+     ],
+     "n": 5,
+     "per_seed": [
+      0.91,
+      0.85,
+      0.86,
+      0.87,
+      0.82
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    }
+   ],
+   "red_learned_vs_blue_baseline": [
+    {
+     "after_episode": 0,
+     "mean": 0.01,
+     "sd": 0.0224,
+     "ci95": [
+      -0.0178,
+      0.0378
+     ],
+     "n": 5,
+     "per_seed": [
+      0.0,
+      0.0,
+      0.05,
+      0.0,
+      0.0
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 250,
+     "mean": 0.313,
+     "sd": 0.2192,
+     "ci95": [
+      0.0408,
+      0.5852
+     ],
+     "n": 5,
+     "per_seed": [
+      0.265,
+      0.325,
+      0.135,
+      0.16,
+      0.68
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 500,
+     "mean": 0.423,
+     "sd": 0.2275,
+     "ci95": [
+      0.1405,
+      0.7055
+     ],
+     "n": 5,
+     "per_seed": [
+      0.3,
+      0.685,
+      0.255,
+      0.22,
+      0.655
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 750,
+     "mean": 0.725,
+     "sd": 0.1,
+     "ci95": [
+      0.6008,
+      0.8492
+     ],
+     "n": 5,
+     "per_seed": [
+      0.67,
+      0.815,
+      0.85,
+      0.66,
+      0.63
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1000,
+     "mean": 0.73,
+     "sd": 0.0771,
+     "ci95": [
+      0.6343,
+      0.8257
+     ],
+     "n": 5,
+     "per_seed": [
+      0.6,
+      0.79,
+      0.745,
+      0.73,
+      0.785
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1250,
+     "mean": 0.786,
+     "sd": 0.0795,
+     "ci95": [
+      0.6873,
+      0.8847
+     ],
+     "n": 5,
+     "per_seed": [
+      0.88,
+      0.725,
+      0.865,
+      0.74,
+      0.72
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1500,
+     "mean": 0.874,
+     "sd": 0.0352,
+     "ci95": [
+      0.8302,
+      0.9178
+     ],
+     "n": 5,
+     "per_seed": [
+      0.84,
+      0.87,
+      0.915,
+      0.84,
+      0.905
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 1750,
+     "mean": 0.891,
+     "sd": 0.034,
+     "ci95": [
+      0.8488,
+      0.9332
+     ],
+     "n": 5,
+     "per_seed": [
+      0.89,
+      0.92,
+      0.86,
+      0.855,
+      0.93
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    },
+    {
+     "after_episode": 2000,
+     "mean": 0.863,
+     "sd": 0.0561,
+     "ci95": [
+      0.7934,
+      0.9326
+     ],
+     "n": 5,
+     "per_seed": [
+      0.85,
+      0.9,
+      0.895,
+      0.77,
+      0.9
+     ],
+     "seeds": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ]
+    }
+   ]
+  }
+ },
+ "final": {
+  "adaptive": {
+   "blue_learned_vs_red_baseline": {
+    "mean": 0.844,
+    "sd": 0.0354,
+    "ci95": [
+     0.8,
+     0.888
+    ],
+    "n": 5,
+    "per_seed": [
+     0.8,
+     0.865,
+     0.855,
+     0.885,
+     0.815
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "blue_learned_vs_red_evasive@0.4": {
+    "mean": 0.906,
+    "sd": 0.0261,
+    "ci95": [
+     0.8736,
+     0.9384
+    ],
+    "n": 5,
+    "per_seed": [
+     0.92,
+     0.94,
+     0.88,
+     0.91,
+     0.88
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "blue_learned_vs_red_evasive@0.7": {
+    "mean": 0.862,
+    "sd": 0.0327,
+    "ci95": [
+     0.8214,
+     0.9026
+    ],
+    "n": 5,
+    "per_seed": [
+     0.91,
+     0.85,
+     0.86,
+     0.87,
+     0.82
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "red_learned_vs_blue_baseline": {
+    "mean": 0.863,
+    "sd": 0.0561,
+    "ci95": [
+     0.7934,
+     0.9326
+    ],
+    "n": 5,
+    "per_seed": [
+     0.85,
+     0.9,
+     0.895,
+     0.77,
+     0.9
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  }
+ },
+ "late_mean": {
+  "adaptive": {
+   "blue_learned_vs_red_baseline": {
+    "mean": 0.7586,
+    "sd": 0.0444,
+    "ci95": [
+     0.7035,
+     0.8137
+    ],
+    "n": 5,
+    "per_seed": [
+     0.746,
+     0.746,
+     0.825,
+     0.704,
+     0.772
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "blue_learned_vs_red_evasive@0.4": {
+    "mean": 0.8104,
+    "sd": 0.0283,
+    "ci95": [
+     0.7753,
+     0.8455
+    ],
+    "n": 5,
+    "per_seed": [
+     0.842,
+     0.788,
+     0.824,
+     0.774,
+     0.824
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "blue_learned_vs_red_evasive@0.7": {
+    "mean": 0.7772,
+    "sd": 0.0392,
+    "ci95": [
+     0.7285,
+     0.8259
+    ],
+    "n": 5,
+    "per_seed": [
+     0.828,
+     0.752,
+     0.778,
+     0.728,
+     0.8
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   },
+   "red_learned_vs_blue_baseline": {
+    "mean": 0.8288,
+    "sd": 0.0287,
+    "ci95": [
+     0.7932,
+     0.8644
+    ],
+    "n": 5,
+    "per_seed": [
+     0.812,
+     0.841,
+     0.856,
+     0.787,
+     0.848
+    ],
+    "seeds": [
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   }
+  }
+ },
+ "contrasts": [],
+ "arms_race": {
+  "malware": {
+   "cycles_mean": 0.0,
+   "recall_at_0.7_first": null,
+   "recall_at_0.7_last": null,
+   "n_updates_mean": 0.0,
+   "per_seed": {
+    "1": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "2": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "3": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "4": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "5": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    }
+   }
+  },
+  "network": {
+   "cycles_mean": 0.4,
+   "recall_at_0.7_first": null,
+   "recall_at_0.7_last": null,
+   "n_updates_mean": 0.0,
+   "per_seed": {
+    "1": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "2": {
+     "cycles": 1,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "3": {
+     "cycles": 1,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "4": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "5": {
+     "cycles": 0,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    }
+   }
+  },
+  "phishing": {
+   "cycles_mean": 2.6,
+   "recall_at_0.7_first": null,
+   "recall_at_0.7_last": null,
+   "n_updates_mean": 0.0,
+   "per_seed": {
+    "1": {
+     "cycles": 3,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "2": {
+     "cycles": 2,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "3": {
+     "cycles": 6,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "4": {
+     "cycles": 1,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    },
+    "5": {
+     "cycles": 1,
+     "n_levels": 41,
+     "n_updates": 0,
+     "recall_first": null,
+     "recall_last": null
+    }
+   }
+  }
+ },
+ "definitions": {
+  "win_rate": "learned side's win rate in that matchup; <matchup>@<s> = scripted red at evasion s",
+  "ci95": "t-interval across seeds: mean +/- t(0.975, n-1) * sd / sqrt(n), sd with ddof=1",
+  "late_mean": "per seed, mean over checkpoints with after_episode >= episodes/2; then across seeds",
+  "final": "last checkpoint",
+  "contrasts": "a - b paired by seed: paired t-test (two-sided p), t-interval of the mean difference",
+  "cycles": "per model, in red_evasion rows: a rise >= 0.2 from a running low followed by a fall >= 0.2 from the peak = 1 cycle (smaller moves are jitter)",
+  "recall_at_0.7_first": "detector recall on held-out malicious rows blended at s=0.7, before the first update (pretrained v0)",
+  "recall_at_0.7_last": "same, after the last detector update"
+ }
+}

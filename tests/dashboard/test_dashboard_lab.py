@@ -374,10 +374,10 @@ def test_compare_figure_two_panels():
     fig = charts.compare_figure(
         [{"name": "a", "curve": curve, "slot": 0}, {"name": "b", "curve": curve, "slot": 8}]
     )
-    names = [t.name for t in fig.data]
-    assert names.count("a") == curve["side"].nunique()
-    assert fig.data[0].line.color == charts.RUN_COLORS[0]
-    assert fig.data[-1].line.color == charts.RUN_COLORS[8 % len(charts.RUN_COLORS)]
+    lines = [t for t in fig.data if t.mode == "lines+markers"]  # the rest are confidence bands
+    assert [t.name for t in lines].count("a") == curve["side"].nunique()
+    assert lines[0].line.color == charts.RUN_COLORS[0]
+    assert lines[-1].line.color == charts.RUN_COLORS[8 % len(charts.RUN_COLORS)]
 
 
 @pytest.mark.parametrize(
@@ -398,3 +398,15 @@ def test_kill_tree_only_kills_our_processes(monkeypatch, cmdline, should_kill):
     monkeypatch.setattr(lab.os, "getpgid", lambda pid: pid, raising=False)
     lab.kill_tree(4242)
     assert bool(calls) is should_kill
+
+
+def test_build_args_bool_default_true_uses_flag_false():
+    spec = {"groups": [{"id": "adaptation", "label": "Adaptation", "params": [
+        {"key": "adaptive", "label": "Adaptive detectors", "type": "bool", "default": True, "target": "cli",
+         "flag": "--adaptive", "flag_false": "--no-adaptive"},
+        {"key": "legacy", "label": "Legacy bool", "type": "bool", "default": True, "target": "cli", "flag": "--legacy"},
+    ]}]}  # fmt: skip
+    assert lab.build_train_args(spec, {"adaptive": True, "legacy": True}) == []
+    assert lab.build_train_args(spec, {"adaptive": False, "legacy": True}) == ["--no-adaptive"]
+    # no flag_false in the spec: nothing can be passed (the old behaviour), never the positive flag
+    assert "--legacy" not in lab.build_train_args(spec, {"adaptive": True, "legacy": False})

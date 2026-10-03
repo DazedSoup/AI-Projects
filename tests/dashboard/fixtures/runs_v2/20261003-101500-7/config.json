@@ -1,0 +1,26 @@
+{
+ "run_id": "20261003-101500-7",
+ "seed": 7,
+ "episodes": 1500,
+ "label": "synthetic v2 fixture",
+ "init_from": null,
+ "adaptive": true,
+ "n_nodes": 14,
+ "crown_jewel": 13,
+ "params": {
+  "episodes": 1500,
+  "eval_every": 250,
+  "eval_n": 40,
+  "adaptive": true,
+  "detector_lr": 0.0001,
+  "detector_update_every": 100,
+  "detector_min_samples": 32,
+  "evasion_cost": 0.35,
+  "red_evasion_lr": 0.1,
+  "stats_every": 50
+ },
+ "env": {
+  "max_rounds": 36,
+  "detect_threshold": 0.5
+ }
+}

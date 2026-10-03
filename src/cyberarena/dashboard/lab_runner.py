@@ -1,4 +1,5 @@
-"""Detached Simulation Lab runner: ``train`` then offline ``enrich``, with ``lab_status.json`` kept current.
+"""Detached Simulation Lab runner: ``train`` then offline ``enrich`` (or one ``arena.experiment``), with the
+job's status file kept current.
 
     python -m cyberarena.dashboard.lab_runner --job runs/.lab/<token>.json
 
@@ -101,12 +102,44 @@ def _stopped(job: dict, rc: int, what: str) -> int:
     return rc
 
 
+def run_experiment(job: dict, job_file: Path) -> int:
+    """``arena.experiment`` as the child (it runs its own train processes in parallel). Stop sends it
+    CTRL_BREAK_EVENT, which it forwards to every train; exit 130 = cancelled, 1 = finished with failed runs."""
+    job.update(pid=os.getpid(), stage="training", message="Experiment: starting the runs…")
+    lab.save_job(job)
+    cmd = list(job["train_cmd"])
+    if "--online" in cmd:
+        job.update(stage="error", message="Refusing to run: --online is never allowed from the Lab.")
+        lab.save_job(job)
+        return 2
+    log = Path(job_file).parent / f"{job['token']}.experiment.log"
+    job["train_log"] = str(log)
+    rc, tail = _run_logged(cmd, log, job, job.get("cwd"), pid_key="train_pid")
+    job["train_exit"] = rc
+    if job.get("stopped") or rc == CANCEL_EXIT:
+        return _stopped(job, rc, "the experiment")
+    if rc not in (0, 1):
+        job.update(stage="error", finished=lab.now_iso(),
+                   message=f"Experiment failed (exit code {rc}): {_error_line(tail)}")  # fmt: skip
+        lab.save_job(job)
+        return rc
+    man = lab.read_json(Path(job["exp_dir"]) / "manifest.json") or {}
+    runs = man.get("runs") or []
+    bad = sum(r.get("status") != "done" for r in runs)
+    job.update(stage="done", finished=lab.now_iso(),
+               message=f"Finished: {len(runs) - bad} of {len(runs)} runs done" + (f", {bad} failed." if bad else "."))  # fmt: skip
+    lab.save_job(job)
+    return 0
+
+
 def run(job_file: Path) -> int:
     job = lab.read_json(job_file)
     if job is None:
         print(f"lab_runner: cannot read job file {job_file}", file=sys.stderr)
         return 2
     job["job_file"] = str(job_file)
+    if job.get("kind") == "experiment":
+        return run_experiment(job, job_file)
     job.update(pid=os.getpid(), stage="training", message="Training: starting (loading classifiers)…")
     lab.save_job(job)
     cwd = job.get("cwd")
