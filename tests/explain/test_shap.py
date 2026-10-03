@@ -61,3 +61,14 @@ def test_explain_turn_without_inputs_is_none(explainer):
 def test_row_hash_ignores_float_noise_below_log_precision():
     assert row_hash([0.1, 0.2]) == row_hash([0.10000001, 0.2])
     assert row_hash([0.1, 0.2]) != row_hash([0.1, 0.3])
+
+
+def test_cache_skips_torn_lines(explainer, tmp_path):
+    cache = tmp_path / "shap.jsonl"
+    svc = ShapService(explainer.settings, cache, explainers={"toy": explainer})
+    ci = {"node": 1, "model": "toy", "row": [0.2] * N_FEATURES, "score": 0.5}
+    a = svc.explain_input(ci)
+    with cache.open("a", encoding="utf-8") as f:
+        f.write('{"key": "x", "val\n\n.0}]}}\n')
+    svc2 = ShapService(explainer.settings, cache, explainers={})
+    assert svc2.cache.skipped == 2 and svc2.explain_input(ci) == a

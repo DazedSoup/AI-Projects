@@ -23,6 +23,9 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from cyberarena.explain.adaptation import adaptation_prompt_lines, adaptation_sentence
+from cyberarena.explain.phrases import ACTION_GERUNDS, PhraseContext, describe, join_clauses
+
 DEFAULT_MODEL = "claude-haiku-4-5"
 MODEL_ENV = "CYBERARENA_NARRATION_MODEL"
 KEY_ENV = "ANTHROPIC_API_KEY"
@@ -95,6 +98,10 @@ class TurnFacts:
     mitre: dict | None
     detect_threshold: float = 0.5
     max_rounds: int | None = None
+    adaptation: dict | None = None  # v2 runs: see cyberarena.explain.adaptation
+    attribution: dict | None = None  # v4 DQN turns: ``agent_attribution`` (cyberarena.explain.attribution)
+    hops: dict[int, int] | None = None  # graph distance of each host to the crown jewel
+    max_dist: int | None = None
 
     @property
     def actor(self) -> str:
@@ -126,6 +133,102 @@ class TurnFacts:
 
     def value_label(self) -> str:
         return "Q-values" if self.agent == "learned" else "heuristic priorities"
+
+    @property
+    def dqn(self) -> bool:
+        return self.agent == "learned" and bool(self.turn.get("candidates"))
+
+    def chosen_and_runner_up(self) -> tuple[dict | None, dict | None]:
+        from cyberarena.explain.attribution import chosen_and_runner_up
+
+        return chosen_and_runner_up(self.turn)
+
+    def phrase_context(self) -> PhraseContext:
+        t, s = self.turn.get("target"), self.turn.get("source")
+        from cyberarena.explain.phrases import ROLE_NAMES
+
+        hops = self.hops or {}
+        role = "crown jewel" if t is not None and t == self.crown_jewel else ROLE_NAMES.get(self.roles.get(t))
+        return PhraseContext(target=t, source=s, t_hops=hops.get(t), s_hops=hops.get(s), max_dist=self.max_dist,
+                             role=role)  # fmt: skip
+
+    def reasons(self, k: int = 3, min_share: float = 0.1) -> list[tuple[str, float]]:
+        """Plain-English clauses for the features that pushed the chosen move's Q up the most (IG > 0)."""
+        a = self.attribution
+        if not a:
+            return []
+        t, s = self.turn.get("target"), self.turn.get("source")
+        pos = [f for f in a.get("top_features") or [] if f["attribution"] > 0
+               and not (f["name"].startswith("s_") and (s is None or s == t))]  # no / same source: nothing to say
+        total = sum(f["attribution"] for f in pos) or 1.0
+        strong = [f for f in pos if f["attribution"] / total >= min_share] or pos[:1]
+        strong = _dedupe(strong)
+        # features the move HAS first (a server, one hop away, ...), then absences ("patches rate lower here")
+        strong.sort(key=lambda f: (_absent(f), -f["attribution"]))
+        ctx = self.phrase_context()
+        return [(describe(f["name"], f["value"], ctx), f["attribution"]) for f in strong[:k]]
+
+
+_ROLE_GROUP = ("t_dmz", "t_workstation", "t_server", "t_crown")
+
+
+def _dedupe(feats: list[dict]) -> list[dict]:
+    """One clause per meaning: one role clause; "is the crown jewel" once (t_crown, or t_dist at zero hops)."""
+    out, role_seen = [], False
+    for f in feats:  # the crown jewel's zero-hop distance is a role statement too
+        if f["name"] in _ROLE_GROUP or (f["name"] == "t_dist" and f["value"] == 0):
+            if role_seen:
+                continue
+            role_seen = True
+        out.append(f)
+    return out
+
+
+def _absent(f: dict) -> bool:
+    """A zero-valued on/off feature (role flag, action one-hot, ...): weaker as an explanation."""
+    from cyberarena.explain.phrases import PHRASES
+
+    p = PHRASES.get(f["name"])
+    return p is not None and p.kind in ("flag", "action") and f["value"] < 0.5 and f["name"] not in _ROLE_GROUP
+
+
+def _q_pair(q: float, r: float) -> str:
+    nd = 3 if abs(q - r) < 0.005 else 2
+    return f"Q {q:.{nd}f} vs {r:.{nd}f}"
+
+
+def move_phrase(c: dict, same_action: bool) -> str:
+    """Runner-up move in words: "host 9" when only the host differs, else "phishing host 9"."""
+    t = c.get("target")
+    host = f"host {t}" if t is not None else "no host"
+    if same_action and t is not None:
+        return host
+    return ACTION_GERUNDS.get(c.get("action"), c.get("action") or "?").format(t=host)
+
+
+def dqn_sentence(f: TurnFacts) -> str:
+    """The "why this host" sentence for a DQN move: chosen vs runner-up Q and the strongest IG evidence."""
+    t = f.turn
+    chosen, runner = f.chosen_and_runner_up()
+    q = chosen["q"] if chosen else (f.attribution or {}).get("q")
+    if t.get("explored"):
+        best = max(t.get("candidates") or [], key=lambda c: c.get("q", 0.0), default=None)
+        if best is None:
+            return "This was an exploration pick"
+        qs = f" ({_q_pair(q, best['q'])})" if q is not None else ""
+        return f"This was an exploration pick rather than its top-ranked move, {move_phrase(best, False)}{qs}"
+    if runner is None:
+        return f"It is the only candidate move (Q {q:.2f})" if q is not None else "It is the only candidate move"
+    same_action = runner.get("action") == t["action_id"]
+    tgt = t.get("target")
+    if same_action and runner.get("target") != tgt and tgt is not None:
+        head = f"It picks host {tgt} over {move_phrase(runner, True)}"
+    else:
+        head = f"It prefers this to {move_phrase(runner, False)}"
+    if q is not None:
+        head += f" ({_q_pair(q, runner['q'])})"
+    reasons = [r for r, _ in f.reasons()]
+    return head + (f", mainly because {join_clauses(reasons)}" if reasons else "")
 
 
 def _state_phrase(ns: dict) -> str:
@@ -170,7 +273,9 @@ def build_prompt(f: TurnFacts, top_values: int = 3, top_features: int = 3) -> st
         )
 
     ranked = f.ranked_values()
-    if ranked:
+    if f.dqn:
+        lines += dqn_prompt_lines(f)
+    elif ranked:
         shown = ranked[:top_values]
         if t["action_id"] not in [a for a, _ in shown] and t["action_id"] in dict(ranked):
             shown.append((t["action_id"], dict(ranked)[t["action_id"]]))
@@ -206,10 +311,47 @@ def build_prompt(f: TurnFacts, top_values: int = 3, top_features: int = 3) -> st
             feats = ", ".join(f"{x['name']} {x['shap']:+.3f}" for x in s["top_features"][:top_features])
             lines.append(f"- {s['model']} model on host {s['node']}: P(malicious) {s['output']:.2f} vs baseline "
                          f"{s['base_value']:.2f}; top features: {feats or 'none'}.")  # fmt: skip
+    adapt = adaptation_prompt_lines(t, f.adaptation, f.detect_threshold)
+    lines += adapt
     if t.get("done"):
         lines.append(f"This move ends the game; winner: {t.get('winner')}.")
-    lines.append(f"In 1-2 sentences, explain why {f.actor} made this move.")
+    ask = f"In 1-2 sentences, explain why {f.actor} made this move"
+    if f.dqn:
+        ask += " rather than the runner-up, citing the Q margin and the strongest evidence for it"
+    if adapt:
+        ask += ("; where it matters, mention red's evasion level and the detector version that scored it, using only "
+                "the numbers above. State these per-turn facts only; do not claim that detector adaptation helps "
+                "blue win.")
+    else:
+        ask += "."
+    lines.append(ask)
     return "\n".join(lines)
+
+
+def dqn_prompt_lines(f: TurnFacts, top: int = 5) -> list[str]:
+    """Candidate Q-values, runner-up margin and IG evidence for a DQN move (online prompt)."""
+    t = f.turn
+    me = (t["action_id"], t.get("source"), t.get("target"))
+    cands = sorted(t.get("candidates") or [], key=lambda c: -c.get("q", 0.0))
+    shown = []
+    for c in cands[:top]:
+        mv = (c.get("action"), c.get("source"), c.get("target"))
+        tag = f"{c.get('action')}->{c.get('target')}" if c.get("target") is not None else str(c.get("action"))
+        shown.append(f"{tag} {c.get('q', 0.0):.3f}" + (" (chosen)" if mv == me else ""))
+    lines = [(f"Candidate moves scored by its Q-network (top {len(shown)} of {len(cands)} logged; higher = "
+              f"preferred): {', '.join(shown)}.")]  # fmt: skip
+    chosen, runner = f.chosen_and_runner_up()
+    if runner is not None and chosen is not None:
+        lines.append(f"Runner-up: {move_phrase(runner, False)}, Q {runner['q']:.3f} "
+                     f"(chosen Q {chosen['q']:.3f}, margin {chosen['q'] - runner['q']:+.3f}).")  # fmt: skip
+    a = f.attribution
+    if a and a.get("top_features"):
+        ctx = f.phrase_context()
+        ev = "; ".join(f"{describe(x['name'], x['value'], ctx)} ({x['attribution']:+.3f})"
+                       for x in a["top_features"][:4])  # fmt: skip
+        lines.append(f"Why this move (integrated gradients on the Q-network vs the average candidate move; + pushed "
+                     f"the chosen move's Q up, - pulled it down): {ev}.")  # fmt: skip
+    return lines
 
 
 def template_rationale(f: TurnFacts) -> str:
@@ -226,7 +368,9 @@ def template_rationale(f: TurnFacts) -> str:
     first = f"{f.actor.capitalize()} {verb}{outcome}."
 
     ranked = f.ranked_values()
-    if not ranked:
+    if f.dqn:
+        why = dqn_sentence(f)
+    elif not ranked:
         why = "No action values were logged for this move"
     elif t.get("explored"):
         best, bv = ranked[0]
@@ -243,12 +387,15 @@ def template_rationale(f: TurnFacts) -> str:
     ev = ""
     if f.shap:
         s = max(f.shap, key=lambda e: e["output"])  # the most suspicious detector reading drives detection
-        ev = f"; the {s['model']} detector reads {s['output']:.2f} on host {s['node']} (baseline {s['base_value']:.2f})"
+        lead = ". The" if f.dqn else "; the"
+        ev = f"{lead} {s['model']} detector reads {s['output']:.2f} on host {s['node']} (baseline {s['base_value']:.2f})"
         if s["top_features"]:
             top = s["top_features"][0]
             ev += f", driven mostly by {top['name']} ({top['shap']:+.2f})"
+    adapt = adaptation_sentence(t, f.adaptation, f.detect_threshold)
+    adapt = f" {adapt}" if adapt else ""
     end = f" The move ends the game: {t.get('winner')} wins." if t.get("done") else ""
-    return f"{first} {why}{ev}.{end}"
+    return f"{first} {why}{ev}.{adapt}{end}"
 
 
 # ------------------------------------------------------------------------------------------------ parsing
@@ -361,8 +508,11 @@ class Narrator:
             with self.cache_path.open(encoding="utf-8") as fh:
                 for line in fh:
                     if line.strip():
-                        rec = json.loads(line)
-                        self._cache[rec["key"]] = rec["value"]
+                        try:  # tolerate torn lines (crash mid-write, or concurrent runs)
+                            rec = json.loads(line)
+                            self._cache[rec["key"]] = rec["value"]
+                        except (json.JSONDecodeError, KeyError, TypeError):
+                            continue
         if not offline and client is None:
             require_credentials()
             import anthropic

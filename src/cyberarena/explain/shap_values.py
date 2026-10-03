@@ -7,7 +7,11 @@ Cost control, because KernelExplainer is O(nsamples * |background|) model evalua
 - background = weighted k-means summary (``shap.kmeans``) of ``clf.background(n_pool)`` rather than raw rows;
 - ``nsamples`` bounded (default 2000, ~0.1 s/row on the 196-feature malware model), with an L1 ``num_features(k)`` selection on wide models so the
   regression is well posed and the top-k is stable;
-- results cached in memory and on disk, keyed by (model, explainer settings, row hash).
+- results cached in memory and on disk, keyed by (model, detector version, explainer settings, row hash).
+
+Adaptive (v2) runs: a ``classifier_inputs[]`` entry with ``version > 0`` was scored by a fine-tuned detector, so it
+is explained against ``runs/<id>/detectors/<model>_v<version>.keras`` (same preprocess and background as the
+pretrained model). Version 0, or no version, means the pretrained Phase 2 model, exactly as before.
 
 DeepExplainer is deliberately not used (unreliable on Keras 3).
 """
@@ -88,10 +92,12 @@ class RowExplainer:
         self._l1 = f"num_features({L1_FEATURES})" if m > L1_FEATURES else False
 
     @classmethod
-    def for_classifier(cls, name: str, settings: ShapSettings) -> RowExplainer:
-        from cyberarena.ml.inference import load_classifier
-
-        clf = load_classifier(name)
+    def for_classifier(cls, name: str, settings: ShapSettings, model_path: Path | None = None,
+                       loader=None) -> RowExplainer:  # fmt: skip
+        """``loader(name, model_path=...)`` defaults to ``cyberarena.ml.inference.load_classifier``."""
+        if loader is None:
+            from cyberarena.ml.inference import load_classifier as loader
+        clf = loader(name) if model_path is None else loader(name, model_path=model_path)
         return cls(name, clf.predict_proba, clf.feature_names, clf.background(settings.background_pool),
                    settings, clf.scaler_mean, clf.scaler_scale)  # fmt: skip
 
@@ -144,12 +150,16 @@ class ShapCache:
     def __init__(self, path: Path | None):
         self.path = Path(path) if path else None
         self._mem: dict[str, dict] = {}
+        self.skipped = 0  # unreadable cache lines (recomputed on demand)
         if self.path and self.path.exists():
             with self.path.open(encoding="utf-8") as f:
                 for line in f:
                     if line.strip():
-                        rec = json.loads(line)
-                        self._mem[rec["key"]] = rec["value"]
+                        try:  # tolerate torn lines (crash mid-write, or two enrich runs appending at once)
+                            rec = json.loads(line)
+                            self._mem[rec["key"]] = rec["value"]
+                        except (json.JSONDecodeError, KeyError, TypeError):
+                            self.skipped += 1
 
     def get(self, key: str) -> dict | None:
         return self._mem.get(key)
@@ -165,33 +175,70 @@ class ShapCache:
         return len(self._mem)
 
 
+class DetectorMissingError(FileNotFoundError):
+    pass
+
+
+def detector_path(run_dir: Path, model: str, version: int) -> Path:
+    return Path(run_dir) / "detectors" / f"{model}_v{version}.keras"
+
+
+def entry_version(ci: dict) -> int:
+    """Detector version that scored a ``classifier_inputs`` entry (0 / missing = pretrained)."""
+    try:
+        return max(0, int(ci.get("version") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 class ShapService:
-    """Lazily builds one RowExplainer per model and explains logged ``classifier_inputs`` entries."""
+    """Lazily builds one RowExplainer per (model, detector version) and explains ``classifier_inputs`` entries.
+
+    ``explainers`` may be keyed by model name (version 0) or by ``(model, version)``. ``run_dir`` is needed only for
+    entries with ``version > 0``; ``loader`` overrides ``load_classifier`` (tests).
+    """
 
     def __init__(self, settings: ShapSettings | None = None, cache_path: Path | None = None,
-                 explainers: dict[str, RowExplainer] | None = None):  # fmt: skip
+                 explainers: dict | None = None, run_dir: Path | None = None, loader=None,
+                 log=print):  # fmt: skip
         self.settings = settings or ShapSettings()
         self.cache = ShapCache(cache_path)
-        self._explainers: dict[str, RowExplainer] = dict(explainers or {})
+        self._explainers: dict[tuple[str, int], RowExplainer] = {
+            (k if isinstance(k, tuple) else (k, 0)): v for k, v in (explainers or {}).items()
+        }
+        self.run_dir = Path(run_dir) if run_dir is not None else None
+        self.loader = loader
+        self.log = log
         self.stats = ShapStats()
+        self.missing: dict[str, int] = {}  # "<model>_v<version>" -> rows skipped (detector file absent)
 
-    def explainer(self, model: str) -> RowExplainer:
-        if model not in self._explainers:
-            self._explainers[model] = RowExplainer.for_classifier(model, self.settings)
-        return self._explainers[model]
+    def explainer(self, model: str, version: int = 0) -> RowExplainer:
+        key = (model, version)
+        if key not in self._explainers:
+            path = None
+            if version > 0:
+                if self.run_dir is None:
+                    raise DetectorMissingError(f"{model} v{version}: no run directory to load detectors from")
+                path = detector_path(self.run_dir, model, version)
+                if not path.exists():
+                    raise DetectorMissingError(f"{path} missing")
+            self._explainers[key] = RowExplainer.for_classifier(model, self.settings, path, self.loader)
+        return self._explainers[key]
 
-    def cache_key(self, model: str, row) -> str:
-        return f"{model}|{self.settings.key()}|{row_hash(row)}"
+    def cache_key(self, model: str, row, version: int = 0) -> str:
+        # version 0 keeps the Phase 4 key, so caches of v1 runs stay valid
+        ver = f"v{version}|" if version > 0 else ""
+        return f"{model}|{ver}{self.settings.key()}|{row_hash(row)}"
 
     def explain_input(self, ci: dict) -> dict:
-        """``ci`` is one ``classifier_inputs`` entry: {"node", "model", "row", "score"}."""
-        model, row = ci["model"], ci["row"]
-        key = self.cache_key(model, row)
+        """``ci`` is one ``classifier_inputs`` entry: {"node", "model", "row", "score"[, "version", "evasion"]}."""
+        model, row, version = ci["model"], ci["row"], entry_version(ci)
+        key = self.cache_key(model, row, version)
         self.stats.rows += 1
         res = self.cache.get(key)
         if res is None:
             t0 = time.perf_counter()
-            res = self.explainer(model).explain(row)
+            res = self.explainer(model, version).explain(row)
             dt = time.perf_counter() - t0
             self.stats.seconds += dt
             self.stats.per_model.setdefault(model, []).append(dt)
@@ -199,8 +246,17 @@ class ShapService:
         else:
             self.stats.cache_hits += 1
         self.stats.max_additivity_err = max(self.stats.max_additivity_err, res.get("additivity_error", 0.0))
-        return {"node": ci["node"], **res}
+        return {"node": ci["node"], **res, "version": version}
 
     def explain_turn(self, turn: dict) -> list[dict] | None:
-        cis = turn.get("classifier_inputs") or []
-        return [self.explain_input(ci) for ci in cis] or None
+        out = []
+        for ci in turn.get("classifier_inputs") or []:
+            try:
+                out.append(self.explain_input(ci))
+            except DetectorMissingError as e:
+                self.stats.rows -= 1
+                tag = f"{ci['model']}_v{entry_version(ci)}"
+                if tag not in self.missing:
+                    self.log(f"  warning: {e}; SHAP skipped for rows scored by {tag}")
+                self.missing[tag] = self.missing.get(tag, 0) + 1
+        return out or None
