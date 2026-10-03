@@ -80,9 +80,18 @@ def test_clean_phishing_label_mapping_and_dedup():
     assert fr.y.tolist() == [1, 0, 0]  # -1 = phishing = malicious
 
 
-def test_clean_malware_labels():
-    df = pd.DataFrame({"P1": [1, 0, 1], "P2": [0, 0, 1], "Label": ["malware", "goodware", np.nan]})
+def test_clean_malware_naticusdroid_labels_and_dedup():
+    df = pd.DataFrame({"android.permission.A": [1, 0, 1, 1], " B ": [0, 0, 1, 0], "Result": [1, 0, 0, 1]})
     fr = ds.clean_malware(df)
+    assert len(fr.X) == 3  # last row is an exact duplicate of the first
+    assert fr.y.tolist() == [1, 0, 0] and list(fr.X.columns) == ["android.permission.A", "B"]
+    with pytest.raises(ValueError, match="labels"):
+        ds.clean_malware(pd.DataFrame({"A": [1, 0], "Result": [1, 2]}))
+
+
+def test_clean_tuandromd_labels():
+    df = pd.DataFrame({"P1": [1, 0, 1], "P2": [0, 0, 1], "Label": ["malware", "goodware", np.nan]})
+    fr = ds.clean_tuandromd(df)
     assert fr.y.tolist() == [1, 0] and list(fr.X.columns) == ["P1", "P2"]
 
 

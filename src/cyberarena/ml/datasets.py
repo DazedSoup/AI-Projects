@@ -1,6 +1,9 @@
 """Dataset acquisition and preprocessing for the three cyberarena classifiers.
 
-CLI:  python -m cyberarena.ml.datasets --all          (or --name malware|phishing|network)
+CLI:  python -m cyberarena.ml.datasets --all          (or --name malware|phishing|network|malware_tuandromd)
+
+``malware`` is UCI NATICUSdroid (id 722, Android permissions). The older, much smaller TUANDROMD set
+(id 855) stays loadable as ``malware_tuandromd`` but is not built or trained by ``--all``.
 
 Output per dataset: ``data/processed/<name>.npz`` with X_train, y_train, X_val, y_val, X_test, y_test
 (already standard-scaled, float32), ``feature_names`` and the scaler params (``scaler_mean``,
@@ -10,7 +13,8 @@ Labels are always 1 = malicious, 0 = benign.
 
 Leakage guards:
 * the scaler (and one-hot vocabulary, constant-column filter) is fit on the training split only;
-* the UCI phishing and TUANDROMD datasets contain thousands of exact duplicate rows (TUANDROMD:
+* the UCI phishing, NATICUSdroid and TUANDROMD datasets contain thousands of exact duplicate rows
+  (NATICUSdroid: 29.3k rows but only ~7.5k distinct, 14.7k malware rows collapse to ~2.6k; TUANDROMD:
   4.4k rows but only ~660 distinct vectors), which would leak between train and test and inflate
   metrics. Exact duplicates are dropped, and splits are *group-aware*: identical feature vectors
   (e.g. the same vector with conflicting labels) always land in the same split;
@@ -33,7 +37,9 @@ from sklearn.preprocessing import StandardScaler
 
 from cyberarena.config import ROOT
 
-NAMES = ("malware", "phishing", "network")
+NAMES = ("malware", "phishing", "network")  # built / trained by default
+EXTRA_NAMES = ("malware_tuandromd",)  # loadable on request only
+ALL_NAMES = NAMES + EXTRA_NAMES
 SEED = 42
 VAL_FRAC = 0.15
 TEST_FRAC = 0.15
@@ -76,6 +82,18 @@ SPECS: dict[str, DatasetSpec] = {
     ),
     "malware": DatasetSpec(
         "malware",
+        f"{_UCI}/dataset/722/naticusdroid+android+permissions+dataset",
+        (
+            RemoteFile(
+                "naticusdroid.csv",
+                f"{_UCI}/static/public/722/data.csv",
+                "5764687009af15605f46941902d6a1c4c1a07618dfefb94a0275edb4869780ba",
+                4_000_000,
+            ),
+        ),
+    ),
+    "malware_tuandromd": DatasetSpec(
+        "malware_tuandromd",
         f"{_UCI}/dataset/855/tuandromd+tezpur+university+android+malware+dataset",
         (
             RemoteFile(
@@ -190,6 +208,20 @@ def clean_phishing(df: pd.DataFrame) -> Frames:
 
 
 def clean_malware(df: pd.DataFrame) -> Frames:
+    """NATICUSdroid: 86 binary permission features; target ``Result`` is 1 = malware, 0 = benign."""
+    df = df.copy()
+    df.columns = [c.strip() for c in df.columns]
+    target = next(c for c in df.columns if c.lower() == "result")
+    df = df.dropna().drop_duplicates()  # 29.3k rows -> ~7.5k; most malware rows are exact copies
+    labels = set(df[target].astype(int).unique())
+    if not labels <= {0, 1}:
+        raise ValueError(f"unexpected NATICUSdroid labels: {sorted(labels)}")
+    y = df[target].astype(np.int64).to_numpy()
+    X = df.drop(columns=[target]).astype(np.float32)
+    return Frames(X, y)
+
+
+def clean_tuandromd(df: pd.DataFrame) -> Frames:
     """TUANDROMD: 241 binary permission/API features; ``Label`` is malware / goodware."""
     df = df.copy()
     # The UCI CSV ships with a case-insensitive find/replace of "no" -> "goodware" applied to its header
@@ -234,9 +266,11 @@ def load_frames(name: str, raw_dir: Path = RAW_DIR, force_download: bool = False
     if name == "phishing":
         return clean_phishing(pd.read_csv(paths["phishing.csv"]))
     if name == "malware":
+        return clean_malware(pd.read_csv(paths["naticusdroid.csv"]))
+    if name == "malware_tuandromd":
         with zipfile.ZipFile(paths["TUANDROMD.zip"]) as z:
             csv = next(n for n in z.namelist() if n.lower().endswith(".csv"))
-            return clean_malware(pd.read_csv(io.BytesIO(z.read(csv))))
+            return clean_tuandromd(pd.read_csv(io.BytesIO(z.read(csv))))
     if name == "network":
         return clean_network(
             pd.read_csv(paths["KDDTrain+.txt"], header=None),
@@ -353,7 +387,7 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--all", action="store_true", help="build all three datasets")
-    g.add_argument("--name", choices=NAMES)
+    g.add_argument("--name", choices=ALL_NAMES)
     ap.add_argument("--force-download", action="store_true")
     args = ap.parse_args(argv)
     for name in NAMES if args.all else (args.name,):

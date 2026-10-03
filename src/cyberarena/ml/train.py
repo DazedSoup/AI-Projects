@@ -1,6 +1,6 @@
 """Train the three Keras MLP classifiers.
 
-CLI:  python -m cyberarena.ml.train --model all|malware|phishing|network
+CLI:  python -m cyberarena.ml.train --model all|malware|phishing|network|malware_tuandromd  (all = the first three)
 
 Reads ``data/processed/<name>.npz`` (run ``python -m cyberarena.ml.datasets --all`` first) and writes
 ``artifacts/models/<name>.keras``, ``artifacts/models/<name>_preprocess.json`` and
@@ -27,7 +27,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-from cyberarena.ml.datasets import NAMES, PROCESSED_DIR, ROOT, SEED, load_processed
+from cyberarena.ml.datasets import ALL_NAMES, NAMES, PROCESSED_DIR, ROOT, SEED, load_processed
 
 ARTIFACTS_DIR = ROOT / "artifacts"
 MODELS_DIR = ARTIFACTS_DIR / "models"
@@ -145,7 +145,7 @@ def format_table(results: dict[str, dict]) -> str:
 
 def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser(description="Train cyberarena classifiers")
-    ap.add_argument("--model", choices=("all", *NAMES), default="all")
+    ap.add_argument("--model", choices=("all", *ALL_NAMES), default="all")
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--verbose", type=int, default=0)
     args = ap.parse_args(argv)
