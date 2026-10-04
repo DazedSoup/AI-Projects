@@ -32,3 +32,8 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
+
+# deploy bundles (python -m cyberarena.deploy)
+/build/
+# public dashboard export (python -m cyberarena.showcase); deployed to the Space, not committed here
+/showcase/

@@ -106,6 +106,36 @@ explicit `--online` flag, and needs your own API key.
 
 Run the tests with `pytest`, and lint with `ruff check src tests`.
 
+## Hosting a public showcase
+
+Your local install stays the admin copy: train runs, launch experiments, and use the Lab. The public site is a
+read-only dashboard over the runs you choose to publish. It has no Lab and launches no processes, and it ships no
+training code or model weights. It runs free on [Streamlit Community Cloud](https://share.streamlit.io).
+
+1. **Choose what to publish.** Use the *Publish* toggles in the Lab's run history and on the Evidence page, or pass
+   names on the command line:
+   `python -m cyberarena.showcase --runs reference,"tabular comparison" --experiments main`
+2. **Export and assemble:**
+   ```bash
+   python -m cyberarena.showcase    # writes showcase/ (~45 MB; local paths scrubbed)
+   python -m cyberarena.deploy      # writes build/streamlit-cloud: dashboard code + showcase + slim requirements
+   ```
+3. **Commit the bundle to the `showcase` branch.** The first time, attach the folder to an orphan branch:
+   ```bash
+   git worktree add --orphan -b showcase build/streamlit-cloud   # once; then re-run step 2 to fill it
+   cd build/streamlit-cloud
+   git add -A && git commit -m "Publish showcase" && git push -u origin showcase
+   ```
+4. **Deploy:** on share.streamlit.io, choose **Create app**, then this repository, branch `showcase`, and main file
+   `src/cyberarena/dashboard/app.py`. Under *Advanced settings*, pick **Python 3.12**.
+
+To update, re-run step 2, then `git add -A && git commit -m "Update showcase" && git push` inside
+`build/streamlit-cloud`; the app redeploys on its own. `deploy` rebuilds the folder but keeps its git link.
+
+The bundle carries a `PUBLIC_SHOWCASE` marker that switches the app to read-only mode with no host settings. Every
+code path that could launch a process refuses in that mode, and tests enforce it. `--target hf-docker` builds a Hugging
+Face Docker Space instead (Hugging Face currently requires a paid plan for Docker Spaces).
+
 ## Methods
 
 - **Information boundary.** Blue's features use only what a defender could know: detected/isolated/patched/confirmed

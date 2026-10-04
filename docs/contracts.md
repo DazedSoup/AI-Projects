@@ -467,3 +467,31 @@ Implemented v4 explain additions:
   - `diag-fix-quantile`, `diag-costly-isolation`.
 - **Reproducibility:** adaptive detector updates aren't bit-reproducible under heavy parallel CPU load (TF float
   nondeterminism). Frozen runs and the DQN are.
+
+## Public showcase (v6)
+
+### Environment switches (`cyberarena.config`, main session)
+- `CYBERARENA_RUNS_DIR`: overrides `RUNS_DIR` (default `<root>/runs`).
+- `CYBERARENA_PUBLIC=1`: public read-only mode. `config.PUBLIC` is a bool.
+
+### Public mode (dashboard)
+- The Simulation Lab page is not registered at all. Every code path that launches a subprocess (train, experiment,
+  enrich, lab_runner, kill, stop) refuses with an exception when `config.PUBLIC` is true. This is enforced in `lab.py`
+  itself, not only by hiding UI, and tested.
+- No page writes to disk (index caches go to a temp dir or memory). Only showcase data is read.
+- A small "Public showcase · runs are trained offline by the author" note sits in the sidebar, and a link to the GitHub repo.
+
+### Publish selection (dashboard, local admin)
+- `runs/.showcase.json`: `{"runs": ["<run_id>", ...], "experiments": ["<name>", ...], "default_run": "<run_id>"}`.
+  It's written by "Publish" toggles in the Lab's run history and the Evidence page's experiment picker (admin mode only).
+
+### Export: `python -m cyberarena.showcase [--runs ...] [--experiments ...] [--out showcase] [--dry-run]`
+- With no arguments, it reads `runs/.showcase.json`. Arguments accept run ids or labels (newest finished match).
+- **Per run, copied:** `config.json`, `graph.json`, `summary.jsonl`, `learning.jsonl`, `progress.json`,
+  `episodes_enriched.jsonl` and `explain_summary.json`, plus a **trimmed `episodes.jsonl`** containing only the enriched
+  episodes' turns, and the probe games the Replay compare view needs. Agent weights, detector files, caches and logs are skipped.
+- **Per experiment, copied:** `manifest.json` and `aggregate.json`, plus each referenced run's `config.json` and
+  `summary.jsonl` (for multi-seed curves). Referenced diagnostic files (`diag-crosseval/*.json`) are copied too.
+- **Writes `showcase/MANIFEST.json`:** `{"created", "runs", "experiments", "default_run", "bytes"}`. It exits non-zero
+  if the output exceeds `--max-mb` (default 50).
+- The dashboard must render every page from a showcase folder with no other files present (tested from a fixture export).
