@@ -1,4 +1,4 @@
-# ai-solutions
+# AI-Projects
 
 Projects I build with the help of Agentic AI
 
