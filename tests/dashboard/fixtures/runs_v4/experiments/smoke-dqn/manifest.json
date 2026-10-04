@@ -1,0 +1,87 @@
+{
+ "name": "smoke-dqn",
+ "created": "2026-10-03T01:42:10",
+ "episodes": 600,
+ "seeds": [
+  1,
+  2,
+  3
+ ],
+ "conditions": [
+  "adaptive",
+  "frozen"
+ ],
+ "extra_args": [],
+ "jobs": 6,
+ "status": "done",
+ "finished": "2026-10-03T01:42:55",
+ "wall_time_s": 45.6,
+ "runs": [
+  {
+   "seed": 1,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-014210-1",
+   "status": "done",
+   "log": "logs/adaptive_seed1.log",
+   "started": "2026-10-03T01:42:10",
+   "finished": "2026-10-03T01:42:55",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-014211-1",
+   "status": "done",
+   "log": "logs/frozen_seed1.log",
+   "started": "2026-10-03T01:42:10",
+   "finished": "2026-10-03T01:42:52",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-014210-2",
+   "status": "done",
+   "log": "logs/adaptive_seed2.log",
+   "started": "2026-10-03T01:42:10",
+   "finished": "2026-10-03T01:42:54",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-014211-2",
+   "status": "done",
+   "log": "logs/frozen_seed2.log",
+   "started": "2026-10-03T01:42:10",
+   "finished": "2026-10-03T01:42:49",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-014210-3",
+   "status": "done",
+   "log": "logs/adaptive_seed3.log",
+   "started": "2026-10-03T01:42:10",
+   "finished": "2026-10-03T01:42:51",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-014211-3",
+   "status": "done",
+   "log": "logs/frozen_seed3.log",
+   "started": "2026-10-03T01:42:10",
+   "finished": "2026-10-03T01:42:49",
+   "returncode": 0,
+   "error": null
+  }
+ ]
+}

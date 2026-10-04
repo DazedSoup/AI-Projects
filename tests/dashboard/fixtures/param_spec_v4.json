@@ -1,0 +1,989 @@
+{
+ "version": 1,
+ "groups": [
+  {
+   "id": "network",
+   "label": "Network",
+   "params": [
+    {
+     "key": "seed",
+     "label": "Seed",
+     "type": "int",
+     "default": 7,
+     "min": 0,
+     "max": 999999,
+     "step": 1,
+     "help": "Seeds the graph, sensors and agents; same seed and settings = same run.",
+     "target": "cli",
+     "flag": "--seed"
+    },
+    {
+     "key": "n_nodes",
+     "label": "Hosts",
+     "type": "int",
+     "default": null,
+     "min": 10,
+     "max": 20,
+     "step": 1,
+     "nullable": true,
+     "help": "null = seeded 12-16. More hosts give red more paths and blue more to watch.",
+     "target": "cli",
+     "flag": "--n-nodes"
+    },
+    {
+     "key": "max_rounds",
+     "label": "Round limit",
+     "type": "int",
+     "default": 36,
+     "min": 10,
+     "max": 100,
+     "step": 1,
+     "help": "Rounds before blue wins by holding out. Raising it gives red more time to reach the crown jewel.",
+     "target": "env"
+    },
+    {
+     "key": "pool_size",
+     "label": "Sensor pool size",
+     "type": "int",
+     "default": 256,
+     "min": 32,
+     "max": 2048,
+     "step": 32,
+     "help": "Pre-scored classifier rows per sensor and class (fixed detectors; adaptive runs use the Adaptation pool size). Raising it gives more varied readings, slower start.",
+     "target": "env",
+     "advanced": true
+    }
+   ]
+  },
+  {
+   "id": "red",
+   "label": "Red team",
+   "params": [
+    {
+     "key": "p_phish",
+     "label": "Phish success",
+     "type": "float",
+     "default": 0.35,
+     "min": 0.05,
+     "max": 0.9,
+     "step": 0.01,
+     "help": "Chance a phishing email lands a foothold. Raising it makes initial access and re-entry easier.",
+     "target": "env"
+    },
+    {
+     "key": "p_exploit",
+     "label": "Exploit success",
+     "type": "float",
+     "default": 0.45,
+     "min": 0.05,
+     "max": 0.95,
+     "step": 0.01,
+     "help": "Chance an exploit on an unpatched host succeeds. Raising it speeds red's spread.",
+     "target": "env"
+    },
+    {
+     "key": "p_exploit_patched",
+     "label": "Exploit success (patched)",
+     "type": "float",
+     "default": 0.12,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Chance an exploit still works on a patched host. Raising it weakens blue's patching.",
+     "target": "env"
+    },
+    {
+     "key": "p_exploit_recon_bonus",
+     "label": "Recon bonus",
+     "type": "float",
+     "default": 0.2,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Extra exploit chance on a host red has scanned. Raising it rewards careful reconnaissance.",
+     "target": "env"
+    },
+    {
+     "key": "p_escalate",
+     "label": "Escalation success",
+     "type": "float",
+     "default": 0.65,
+     "min": 0.05,
+     "max": 0.95,
+     "step": 0.01,
+     "help": "Chance of gaining admin on a foothold. Raising it lets red reach exfiltration sooner.",
+     "target": "env"
+    },
+    {
+     "key": "p_escalate_patched",
+     "label": "Escalation success (patched)",
+     "type": "float",
+     "default": 0.25,
+     "min": 0.0,
+     "max": 0.6,
+     "step": 0.01,
+     "help": "Chance escalation works on a patched host. Raising it weakens blue's patching.",
+     "target": "env"
+    },
+    {
+     "key": "p_lateral",
+     "label": "Lateral move success",
+     "type": "float",
+     "default": 0.8,
+     "min": 0.1,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance an admin foothold pivots to a neighbour. Raising it speeds red through the network.",
+     "target": "env"
+    },
+    {
+     "key": "p_exfiltrate",
+     "label": "Exfiltration success",
+     "type": "float",
+     "default": 0.75,
+     "min": 0.1,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance stealing from the crown jewel works once red holds it. Raising it shortens red's endgame.",
+     "target": "env"
+    },
+    {
+     "key": "phish_max_footholds",
+     "label": "Phish while footholds <=",
+     "type": "int",
+     "default": 1,
+     "min": 0,
+     "max": 5,
+     "step": 1,
+     "help": "Phishing is offered only while red holds at most this many hosts. Raising it makes phishing an expansion tool, not just re-entry.",
+     "target": "env"
+    }
+   ]
+  },
+  {
+   "id": "blue",
+   "label": "Blue team",
+   "params": [
+    {
+     "key": "detect_threshold",
+     "label": "Detection threshold",
+     "type": "float",
+     "default": 0.5,
+     "min": 0.1,
+     "max": 0.95,
+     "step": 0.01,
+     "help": "Classifier score needed for monitoring to flag a host. Raising it means fewer false alarms but more missed intrusions.",
+     "target": "env"
+    },
+    {
+     "key": "p_implant_leak.malware",
+     "label": "Malware implant leak",
+     "type": "float",
+     "default": 0.2,
+     "min": 0.0,
+     "max": 0.6,
+     "step": 0.01,
+     "help": "Chance a compromised host shows a malicious malware reading when monitored. Raising it makes footholds easier to spot.",
+     "target": "env"
+    },
+    {
+     "key": "p_implant_leak.phishing",
+     "label": "Phishing implant leak",
+     "type": "float",
+     "default": 0.05,
+     "min": 0.0,
+     "max": 0.6,
+     "step": 0.01,
+     "help": "Chance a compromised host shows a malicious phishing reading when monitored. Raising it makes footholds easier to spot.",
+     "target": "env"
+    },
+    {
+     "key": "p_implant_leak.network",
+     "label": "Network implant leak",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 0.6,
+     "step": 0.01,
+     "help": "Chance a compromised host shows a malicious network reading when monitored. Raising it makes footholds easier to spot.",
+     "target": "env"
+    },
+    {
+     "key": "p_reset_evicts",
+     "label": "Credential reset evicts",
+     "type": "float",
+     "default": 0.5,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance resetting credentials kicks a non-admin foothold out. Raising it makes resets a stronger response.",
+     "target": "env"
+    },
+    {
+     "key": "noise.recon",
+     "label": "Recon noise",
+     "type": "float",
+     "default": 0.25,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance a recon attempt makes its host emit a malicious sensor reading. Raising it makes that red action louder and easier for blue to detect.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "noise.phish",
+     "label": "Phishing noise",
+     "type": "float",
+     "default": 0.85,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance a phishing attempt makes its host emit a malicious sensor reading. Raising it makes that red action louder and easier for blue to detect.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "noise.exploit",
+     "label": "Exploit noise",
+     "type": "float",
+     "default": 0.75,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance an exploit attempt makes its host emit a malicious sensor reading. Raising it makes that red action louder and easier for blue to detect.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "noise.escalate",
+     "label": "Escalation noise",
+     "type": "float",
+     "default": 0.6,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance an escalation attempt makes its host emit a malicious sensor reading. Raising it makes that red action louder and easier for blue to detect.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "noise.lateral_move",
+     "label": "Lateral move noise",
+     "type": "float",
+     "default": 0.4,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance a lateral move attempt makes its host emit a malicious sensor reading. Raising it makes that red action louder and easier for blue to detect.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "noise.exfiltrate",
+     "label": "Exfiltration noise",
+     "type": "float",
+     "default": 0.9,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance an exfiltration attempt makes its host emit a malicious sensor reading. Raising it makes that red action louder and easier for blue to detect.",
+     "target": "env",
+     "advanced": true
+    }
+   ]
+  },
+  {
+   "id": "rewards",
+   "label": "Rewards",
+   "params": [
+    {
+     "key": "r_win",
+     "label": "Win reward",
+     "type": "float",
+     "default": 1.0,
+     "min": 0.1,
+     "max": 5.0,
+     "step": 0.1,
+     "help": "Reward for winning. Raising it makes the final outcome dominate shaping.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_new_foothold",
+     "label": "New foothold",
+     "type": "float",
+     "default": 0.05,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Red's reward for each new host. Raising it pushes red to spread wide.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_server_foothold",
+     "label": "Server foothold",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Extra red reward for owning a server. Raising it draws red toward servers.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_crown_foothold",
+     "label": "Crown-jewel foothold",
+     "type": "float",
+     "default": 0.25,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Extra red reward for owning the crown jewel. Raising it makes red beeline for it.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_privilege",
+     "label": "Privilege gain",
+     "type": "float",
+     "default": 0.05,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Red's reward for each escalation. Raising it encourages escalating before moving.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_foothold_lost",
+     "label": "Foothold lost",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Red's penalty (blue's gain) when a foothold is removed. Raising it makes evictions matter more.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_turn",
+     "label": "Time pressure",
+     "type": "float",
+     "default": 0.005,
+     "min": 0.0,
+     "max": 0.05,
+     "step": 0.001,
+     "help": "Red pays this per turn and blue earns it. Raising it hurries red.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "rules",
+     "label": "Rule set",
+     "type": "choice",
+     "default": "default",
+     "choices": [
+      "default",
+      "cheap-isolation"
+     ],
+     "help": "default: isolating a clean host costs blue 0.3 at once plus 0.03 per turn it stays cut off, so blue has to be fairly sure before it isolates. cheap-isolation: the previous rules where isolating a clean host was nearly free (0.1 / 0.01), so blue could win by cutting off hosts on a hunch. Individual reward settings below still override the rule set.",
+     "target": "cli",
+     "flag": "--rules"
+    },
+    {
+     "key": "r_isolate_true",
+     "label": "Correct isolation",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Blue's reward for isolating a truly compromised host. Raising it makes blue quicker to isolate.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_isolate_false",
+     "label": "Wrong isolation",
+     "type": "float",
+     "default": 0.3,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Blue's penalty for isolating a clean host (default 0.3; 0.1 under the cheap-isolation rules). Raising it makes blue more cautious.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_detect_true",
+     "label": "True detection",
+     "type": "float",
+     "default": 0.0,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Blue's reward when monitoring flags a compromised host. Raising it encourages monitoring.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_detect_false",
+     "label": "False positive",
+     "type": "float",
+     "default": 0.0,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Blue's penalty when monitoring flags a clean host. Raising it discourages noisy monitoring.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "r_isolated_upkeep",
+     "label": "Isolation upkeep",
+     "type": "float",
+     "default": 0.03,
+     "min": 0.0,
+     "max": 0.1,
+     "step": 0.001,
+     "help": "Blue's cost per isolated host per turn (business disruption; default 0.03, 0.01 under the cheap-isolation rules). Raising it makes blue restore sooner.",
+     "target": "env",
+     "advanced": true
+    }
+   ]
+  },
+  {
+   "id": "training",
+   "label": "Training",
+   "params": [
+    {
+     "key": "episodes",
+     "label": "Episodes",
+     "type": "int",
+     "default": 2000,
+     "min": 100,
+     "max": 20000,
+     "step": 100,
+     "help": "Training games. Raising it gives the learners more practice (slower).",
+     "target": "cli",
+     "flag": "--episodes"
+    },
+    {
+     "key": "eval_every",
+     "label": "Eval every",
+     "type": "int",
+     "default": 250,
+     "min": 50,
+     "max": 5000,
+     "step": 50,
+     "help": "Episodes between win-rate checkpoints. Lowering it gives a finer chart but slower runs.",
+     "target": "cli",
+     "flag": "--eval-every"
+    },
+    {
+     "key": "eval_n",
+     "label": "Eval games",
+     "type": "int",
+     "default": 200,
+     "min": 20,
+     "max": 1000,
+     "step": 10,
+     "help": "Games per matchup at each checkpoint. Raising it gives a less noisy win-rate chart (slower).",
+     "target": "cli",
+     "flag": "--eval-n"
+    },
+    {
+     "key": "eval_log_n",
+     "label": "Logged eval games",
+     "type": "int",
+     "default": 10,
+     "min": 0,
+     "max": 200,
+     "step": 1,
+     "help": "Eval games per matchup per checkpoint saved for replay. Raising it gives more to replay, bigger logs.",
+     "target": "cli",
+     "flag": "--eval-log-n"
+    },
+    {
+     "key": "agent",
+     "label": "Learner type",
+     "type": "choice",
+     "default": "dqn",
+     "choices": [
+      "dqn",
+      "tabular"
+     ],
+     "help": "How the two learning sides think. Neural network (dqn): a small TensorFlow network scores every possible move, including which host to hit. Lookup table (tabular): the older learner that only picks the kind of move and lets a fixed rule pick the host.",
+     "target": "cli",
+     "flag": "--agent"
+    },
+    {
+     "key": "dqn_lr",
+     "label": "Network learning rate",
+     "type": "float",
+     "default": 0.001,
+     "min": 0.0001,
+     "max": 0.01,
+     "step": 0.0001,
+     "help": "Step size of the neural network's training (dqn only). Raising it learns faster but less stably.",
+     "target": "cli",
+     "flag": "--dqn-lr",
+     "advanced": true
+    },
+    {
+     "key": "dqn_hidden",
+     "label": "Network size",
+     "type": "choice",
+     "default": "64,64",
+     "choices": [
+      "32",
+      "64,64",
+      "128,128",
+      "64,64,64"
+     ],
+     "help": "Hidden layer sizes of the neural network (dqn only), e.g. 64,64 = two layers of 64. Bigger networks can learn subtler play but need more games.",
+     "target": "cli",
+     "flag": "--dqn-hidden",
+     "advanced": true
+    },
+    {
+     "key": "dqn_gamma",
+     "label": "Network discount",
+     "type": "float",
+     "default": 0.95,
+     "min": 0.5,
+     "max": 0.999,
+     "step": 0.001,
+     "help": "How much future reward counts for the neural network learner (dqn only; the lookup table uses Discount). Raising it makes it plan further ahead.",
+     "target": "cli",
+     "flag": "--dqn-gamma",
+     "advanced": true
+    },
+    {
+     "key": "n_step",
+     "label": "Look-ahead steps",
+     "type": "int",
+     "default": 3,
+     "min": 1,
+     "max": 10,
+     "step": 1,
+     "help": "Moves of real reward the network sums before trusting its own estimate (dqn only). Raising it spreads the win/loss signal back faster but noisier.",
+     "target": "cli",
+     "flag": "--n-step",
+     "advanced": true
+    },
+    {
+     "key": "replay_size",
+     "label": "Memory size",
+     "type": "int",
+     "default": 10000,
+     "min": 1000,
+     "max": 100000,
+     "step": 1000,
+     "help": "Past moves the network remembers and re-learns from (dqn only). Larger remembers older play; smaller adapts faster to the current opponent.",
+     "target": "cli",
+     "flag": "--replay-size",
+     "advanced": true
+    },
+    {
+     "key": "batch_size",
+     "label": "Batch size",
+     "type": "int",
+     "default": 64,
+     "min": 16,
+     "max": 512,
+     "step": 16,
+     "help": "Remembered moves per training step (dqn only). Raising it gives smoother but slower learning.",
+     "target": "cli",
+     "flag": "--batch-size",
+     "advanced": true
+    },
+    {
+     "key": "target_sync",
+     "label": "Target refresh",
+     "type": "int",
+     "default": 250,
+     "min": 10,
+     "max": 5000,
+     "step": 10,
+     "help": "Training steps between refreshes of the network's frozen copy that sets its learning targets (dqn only). Raising it is more stable but slower to improve.",
+     "target": "cli",
+     "flag": "--target-sync",
+     "advanced": true
+    },
+    {
+     "key": "train_every",
+     "label": "Train every",
+     "type": "int",
+     "default": 4,
+     "min": 1,
+     "max": 32,
+     "step": 1,
+     "help": "Own moves between training steps (dqn only). Lowering it trains more often (slower runs).",
+     "target": "cli",
+     "flag": "--train-every",
+     "advanced": true
+    },
+    {
+     "key": "alpha",
+     "label": "Learning rate",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.001,
+     "max": 1.0,
+     "step": 0.001,
+     "help": "Lookup-table learner only: how far each update moves a Q-value at the start. Raising it learns faster but less stably.",
+     "target": "cli",
+     "flag": "--alpha"
+    },
+    {
+     "key": "alpha_end",
+     "label": "Final learning rate",
+     "type": "float",
+     "default": 0.01,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.001,
+     "help": "Lookup-table learner only: learning rate at the end of training (linear decay). Raising it keeps learning plastic late on.",
+     "target": "cli",
+     "flag": "--alpha-end"
+    },
+    {
+     "key": "gamma",
+     "label": "Discount",
+     "type": "float",
+     "default": 0.9,
+     "min": 0.5,
+     "max": 0.999,
+     "step": 0.001,
+     "help": "Lookup-table learner only: how much future reward counts. Raising it makes agents plan further ahead.",
+     "target": "cli",
+     "flag": "--gamma"
+    },
+    {
+     "key": "eps_start",
+     "label": "Exploration start",
+     "type": "float",
+     "default": 1.0,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance of a random move at the start. Use about 0.3 when continuing from a saved run.",
+     "target": "cli",
+     "flag": "--eps-start"
+    },
+    {
+     "key": "eps_end",
+     "label": "Exploration end",
+     "type": "float",
+     "default": 0.02,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Chance of a random move after decay. Raising it keeps agents experimenting.",
+     "target": "cli",
+     "flag": "--eps-end"
+    },
+    {
+     "key": "eps_decay_frac",
+     "label": "Exploration decay",
+     "type": "float",
+     "default": 0.6,
+     "min": 0.05,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Fraction of training over which exploration decays. Raising it explores for longer.",
+     "target": "cli",
+     "flag": "--eps-decay-frac"
+    },
+    {
+     "key": "eval_evasion_levels",
+     "label": "Disguised-attacker tests",
+     "type": "choice",
+     "default": "0.4,0.7",
+     "choices": [
+      "0.4,0.7",
+      "0.7",
+      "0.2,0.4,0.7",
+      "0.1,0.3,0.5,0.7",
+      ""
+     ],
+     "help": "At every checkpoint, learned blue also plays the scripted attacker disguising all its activity at these fixed levels (comma-separated, 0.1-0.7; empty = off). This is the test of whether blue's detectors keep up with disguise; with adaptive detectors off they stay the original models.",
+     "target": "cli",
+     "flag": "--eval-evasion-levels"
+    },
+    {
+     "key": "eval_evasive_n",
+     "label": "Disguised-attacker test games",
+     "type": "int",
+     "default": 100,
+     "min": 10,
+     "max": 1000,
+     "step": 10,
+     "help": "Games per disguise level at each checkpoint (they count toward that level's win rate only). Raising it gives a less noisy disguised-attacker chart (slower).",
+     "target": "cli",
+     "flag": "--eval-evasive-n"
+    }
+   ]
+  },
+  {
+   "id": "opponents",
+   "label": "Opponents",
+   "params": [
+    {
+     "key": "baseline",
+     "label": "Baseline type",
+     "type": "choice",
+     "default": "heuristic",
+     "choices": [
+      "heuristic",
+      "random"
+     ],
+     "help": "Fixed opponent the learners train against and are scored against. Random is much weaker.",
+     "target": "cli",
+     "flag": "--baseline"
+    },
+    {
+     "key": "red_baseline_noise",
+     "label": "Baseline red noise",
+     "type": "float",
+     "default": 0.3,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance the baseline attacker plays a random move. Raising it makes it weaker and less predictable.",
+     "target": "cli",
+     "flag": "--red-baseline-noise"
+    },
+    {
+     "key": "blue_baseline_noise",
+     "label": "Baseline blue noise",
+     "type": "float",
+     "default": 0.4,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "Chance the baseline defender plays a random move. Raising it makes it weaker and less predictable.",
+     "target": "cli",
+     "flag": "--blue-baseline-noise"
+    }
+   ]
+  },
+  {
+   "id": "memory",
+   "label": "Memory",
+   "params": [
+    {
+     "key": "init_side",
+     "label": "Warm-start side",
+     "type": "choice",
+     "default": "both",
+     "choices": [
+      "both",
+      "red",
+      "blue"
+     ],
+     "help": "With --init-from, which learners start from the saved run's networks or Q-tables (same learner type only); the other starts fresh. Blue also brings the saved detector versions, red its evasion levels.",
+     "target": "cli",
+     "flag": "--init-side"
+    }
+   ]
+  },
+  {
+   "id": "adaptation",
+   "label": "Adaptation",
+   "params": [
+    {
+     "key": "adaptive",
+     "label": "Adaptive detectors",
+     "type": "bool",
+     "default": true,
+     "help": "On: blue's three detectors keep learning from hosts blue investigates, and red learns how much to disguise its activity. Off: the original fixed detectors and a red that never disguises anything.",
+     "target": "cli",
+     "flag": "--adaptive",
+     "flag_false": "--no-adaptive"
+    },
+    {
+     "key": "detector_lr",
+     "label": "Detector learning rate",
+     "type": "float",
+     "default": 0.001,
+     "min": 0.0001,
+     "max": 0.01,
+     "step": 0.0001,
+     "help": "How big each detector fine-tuning step is. Raising it adapts faster but forgets old traffic sooner; 1e-4 barely moves the models.",
+     "target": "cli",
+     "flag": "--detector-lr"
+    },
+    {
+     "key": "detector_update_every",
+     "label": "Retrain detectors every",
+     "type": "int",
+     "default": 100,
+     "min": 25,
+     "max": 1000,
+     "step": 25,
+     "help": "Games between detector updates. Lowering it makes blue's detectors react faster to red's new disguises (slightly slower runs).",
+     "target": "cli",
+     "flag": "--detector-update-every"
+    },
+    {
+     "key": "detector_min_samples",
+     "label": "Minimum new examples",
+     "type": "int",
+     "default": 32,
+     "min": 4,
+     "max": 512,
+     "step": 4,
+     "help": "Labelled readings a detector needs (with some of each kind) before it retrains. Raising it means fewer, better-informed updates.",
+     "target": "cli",
+     "flag": "--detector-min-samples"
+    },
+    {
+     "key": "evasion_cost",
+     "label": "Cost of disguise",
+     "type": "float",
+     "default": 0.25,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "How much disguising activity slows red down: success chance x (1 - cost x disguise level). Raising it makes heavy disguise expensive, so red settles on lighter disguise.",
+     "target": "cli",
+     "flag": "--evasion-cost"
+    },
+    {
+     "key": "red_evasion_lr",
+     "label": "Red adaptation rate",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.01,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "How quickly red's disguise choices react to recent games. Raising it makes red switch disguise level sooner after being caught (and noisier).",
+     "target": "cli",
+     "flag": "--red-evasion-lr"
+    },
+    {
+     "key": "red_evasion_explore",
+     "label": "Red disguise experiments",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 0.5,
+     "step": 0.01,
+     "help": "Chance red tries a random disguise level in a game instead of its current best. Raising it lets red notice sooner when an old level works again.",
+     "target": "cli",
+     "flag": "--red-evasion-explore",
+     "advanced": true
+    },
+    {
+     "key": "red_detect_penalty",
+     "label": "Red's fear of being seen",
+     "type": "float",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 1.0,
+     "step": 0.01,
+     "help": "How much red counts each of its readings that a detector flags, against the progress it made. Raising it makes red disguise more heavily.",
+     "target": "cli",
+     "flag": "--red-detect-penalty",
+     "advanced": true
+    },
+    {
+     "key": "phish_forensics",
+     "label": "Phishing forensics",
+     "type": "bool",
+     "default": true,
+     "help": "On: when blue investigates a host it also reviews that host's mailbox, including the email behind red's first foothold, and proving a phished foothold makes blue search every mailbox for red's other phishing emails. This gives the phishing detector enough labelled examples to keep up with disguise. Changes only what the detectors learn from, not the game itself. Off = the v3 behaviour.",
+     "target": "env"
+    },
+    {
+     "key": "phish_campaign_size",
+     "label": "Phishing campaign size",
+     "type": "int",
+     "default": 3,
+     "min": 1,
+     "max": 8,
+     "step": 1,
+     "help": "With phishing forensics on: how many workstations received the phishing email that gave red its first foothold (only one clicked). Raising it gives blue more phishing examples once it uncovers the campaign.",
+     "target": "env",
+     "advanced": true
+    },
+    {
+     "key": "adaptive_pool_size",
+     "label": "Readings per disguise level",
+     "type": "int",
+     "default": 1024,
+     "min": 128,
+     "max": 4096,
+     "step": 128,
+     "help": "Pre-scored readings per sensor and disguise level when detectors adapt. Larger pools make detectors generalise instead of memorising the exact readings they were retrained on.",
+     "target": "cli",
+     "flag": "--adaptive-pool-size",
+     "advanced": true
+    },
+    {
+     "key": "detectors",
+     "label": "Detector updates (diagnostic)",
+     "type": "choice",
+     "default": "auto",
+     "choices": [
+      "auto",
+      "adaptive",
+      "frozen"
+     ],
+     "help": "Separates the two halves of adaptation for experiments. auto: follow Adaptive detectors. adaptive: detectors keep retraining. frozen: blue keeps the original detectors for the whole run, but readings still come from the adaptive sensor pools (so only the retraining is switched off). Needs Adaptive detectors on.",
+     "target": "cli",
+     "flag": "--detectors",
+     "advanced": true
+    },
+    {
+     "key": "red_evasion",
+     "label": "Red disguise (diagnostic)",
+     "type": "choice",
+     "default": "auto",
+     "choices": [
+      "auto",
+      "bandit",
+      "off"
+     ],
+     "help": "Separates the two halves of adaptation for experiments. auto: follow Adaptive detectors. bandit: the learned red picks how much to disguise its activity. off: red never disguises (level 0 on every sensor), even while blue's detectors retrain. Needs Adaptive detectors on.",
+     "target": "cli",
+     "flag": "--red-evasion",
+     "advanced": true
+    },
+    {
+     "key": "blue_score_view",
+     "label": "Blue's view of scores (diagnostic)",
+     "type": "choice",
+     "default": "raw",
+     "choices": [
+      "raw",
+      "clean_quantile"
+     ],
+     "help": "How blue's neural network sees detector scores. raw: the score itself. clean_quantile: where the score sits among the current detector's scores on clean traffic (0.99 = higher than 99% of clean readings), so retraining a detector does not change what a normal reading looks like to blue. Monitoring still flags on the raw score.",
+     "target": "cli",
+     "flag": "--blue-score-view",
+     "advanced": true
+    },
+    {
+     "key": "stats_every",
+     "label": "Learning stats every",
+     "type": "int",
+     "default": 50,
+     "min": 10,
+     "max": 1000,
+     "step": 10,
+     "help": "Games per row of learning statistics (Q-table size, TD error, action mix, red's disguise levels).",
+     "target": "cli",
+     "flag": "--stats-every",
+     "advanced": true
+    }
+   ]
+  }
+ ]
+}

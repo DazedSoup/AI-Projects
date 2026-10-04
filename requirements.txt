@@ -1,0 +1,26 @@
+# Python 3.12 (TensorFlow has no wheels for 3.14)
+
+# Phase 2 — ML
+tensorflow>=2.17,<2.21
+numpy>=1.26,<3
+pandas>=2.2
+scikit-learn>=1.5
+ucimlrepo>=0.0.7
+requests>=2.32
+
+# Phase 3 — arena
+gymnasium>=1.0
+networkx>=3.3
+
+# Phase 4 — explainability
+shap>=0.46
+anthropic>=0.40
+python-dotenv>=1.0
+
+# Phase 5 — dashboard
+streamlit>=1.64,<1.65  # dashboard CSS targets this release's DOM; re-check styling before bumping
+plotly>=5.24
+
+# Dev
+pytest>=8.3
+ruff>=0.7

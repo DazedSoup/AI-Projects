@@ -1,0 +1,133 @@
+{
+ "name": "main",
+ "created": "2026-10-03T11:03:48",
+ "episodes": 2000,
+ "seeds": [
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "conditions": [
+  "adaptive",
+  "frozen"
+ ],
+ "extra_args": [],
+ "jobs": 10,
+ "status": "done",
+ "finished": "2026-10-03T11:07:09",
+ "wall_time_s": 201.7,
+ "runs": [
+  {
+   "seed": 1,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-110349-1",
+   "status": "done",
+   "log": "logs/adaptive_seed1.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:07:09",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 1,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-110348-1",
+   "status": "done",
+   "log": "logs/frozen_seed1.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:06:56",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-110348-2",
+   "status": "done",
+   "log": "logs/adaptive_seed2.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:07:04",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-110349-2",
+   "status": "done",
+   "log": "logs/frozen_seed2.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:06:54",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-110348-3",
+   "status": "done",
+   "log": "logs/adaptive_seed3.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:07:05",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-110349-3",
+   "status": "done",
+   "log": "logs/frozen_seed3.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:06:50",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-110349-4",
+   "status": "done",
+   "log": "logs/adaptive_seed4.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:07:07",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-110348-4",
+   "status": "done",
+   "log": "logs/frozen_seed4.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:06:50",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 5,
+   "condition": "adaptive",
+   "run_dir": "runs-not-in-fixture\\20261003-110349-5",
+   "status": "done",
+   "log": "logs/adaptive_seed5.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:07:03",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 5,
+   "condition": "frozen",
+   "run_dir": "runs-not-in-fixture\\20261003-110348-5",
+   "status": "done",
+   "log": "logs/frozen_seed5.log",
+   "started": "2026-10-03T11:03:48",
+   "finished": "2026-10-03T11:06:51",
+   "returncode": 0,
+   "error": null
+  }
+ ]
+}

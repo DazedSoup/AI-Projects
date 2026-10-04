@@ -1,0 +1,8 @@
+# Normalise text to LF in the repo; Git converts per platform on checkout.
+* text=auto eol=lf
+
+*.keras binary
+*.npz   binary
+*.png   binary
+*.jpg   binary
+*.zip   binary
