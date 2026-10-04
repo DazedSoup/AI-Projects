@@ -1,3 +1,3 @@
 # ai-solutions
 
-Local repository for AI solutions work.
+Projects I build with the help of Agentic AI
