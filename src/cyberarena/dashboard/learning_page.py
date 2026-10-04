@@ -26,13 +26,18 @@ if lr is None or lr.empty:
             "This run predates adaptive learning",
             "It has no <code>learning.jsonl</code>: its detectors were the fixed pretrained models and red never "
             "adapted its evasion, so there is no arms race, learning landscape, detector history or probe data to "
-            "show. Launch a new run from the Simulation Lab (adaptive learning is on by default) to fill this page.",
+            "show. " + ("Pick another run in the sidebar." if common.public() else "Launch a new run from the "
+                        "Simulation Lab (adaptive learning is on by default) to fill this page."),
         )
     q = common.q_states(run)
     with common.card("agents-v1"):
         T.card_header("Q-table growth", "Distinct situations each learned agent has values for, at every saved "
                       "checkpoint (from <code>agents/checkpoints/</code>).")  # fmt: skip
-        if q.empty:
+        if q.empty and common.public():
+            T.empty_state("Agent checkpoints not in the showcase",
+                          "The saved Q-tables (<code>agents/checkpoints/</code>) are " + common.NOT_IN_SHOWCASE
+                          + ": it carries logs and summaries, never agent weights.")  # fmt: skip
+        elif q.empty:
             T.empty_state("No saved checkpoints", "This run did not save agent checkpoints.")
         else:
             T.chart(charts.agent_figure(q.iloc[0:0].rename(columns={}), qstates=q, height=280), key="lr_q_v1")

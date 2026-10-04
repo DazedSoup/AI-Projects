@@ -32,6 +32,7 @@ KILL_AFTER_S = 20.0  # a child that ignores the cancel signal this long is kille
 def _cancel(proc: subprocess.Popen) -> None:
     """Graceful cancel: CTRL_BREAK_EVENT to the child's own process group (Windows), SIGINT elsewhere.
     ``terminate()`` would be TerminateProcess on Windows, which train cannot catch to update progress.json."""
+    lab.refuse_in_public("Cancelling a process")
     try:
         proc.send_signal(signal.CTRL_BREAK_EVENT if os.name == "nt" else signal.SIGINT)
     except (OSError, ValueError):
@@ -66,6 +67,7 @@ def _error_line(tail: deque[str]) -> str:
 def _run_logged(
     cmd: list[str], log_path: Path, job: dict, cwd: str | None, on_line=None, pid_key: str = "child_pid"
 ) -> tuple[int, deque]:
+    lab.refuse_in_public("Running a Lab job")
     tail: deque[str] = deque(maxlen=_TAIL)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(log_path, "a", encoding="utf-8") as log:
@@ -105,6 +107,7 @@ def _stopped(job: dict, rc: int, what: str) -> int:
 def run_experiment(job: dict, job_file: Path) -> int:
     """``arena.experiment`` as the child (it runs its own train processes in parallel). Stop sends it
     CTRL_BREAK_EVENT, which it forwards to every train; exit 130 = cancelled, 1 = finished with failed runs."""
+    lab.refuse_in_public("Running an experiment")
     job.update(pid=os.getpid(), stage="training", message="Experiment: starting the runs…")
     lab.save_job(job)
     cmd = list(job["train_cmd"])
@@ -133,6 +136,7 @@ def run_experiment(job: dict, job_file: Path) -> int:
 
 
 def run(job_file: Path) -> int:
+    lab.refuse_in_public("Running a Lab job")
     job = lab.read_json(job_file)
     if job is None:
         print(f"lab_runner: cannot read job file {job_file}", file=sys.stderr)
@@ -209,6 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m cyberarena.dashboard.lab_runner", description=__doc__)
     ap.add_argument("--job", required=True, type=Path, help="runs/.lab/<token>.json written by the dashboard")
     args = ap.parse_args(argv)
+    lab.refuse_in_public("The Lab runner")  # before the try: a public process must not even write the job file
     try:
         return run(args.job)
     except Exception as e:  # noqa: BLE001 - the status file must always say why we stopped

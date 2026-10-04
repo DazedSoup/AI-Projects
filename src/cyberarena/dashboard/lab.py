@@ -32,6 +32,7 @@ from typing import Any
 
 import pandas as pd
 
+from cyberarena import config
 from cyberarena.dashboard import loaders as L
 
 _REAL_SUBPROCESS = subprocess  # creation-flag constants come from here even when tests swap `subprocess`
@@ -65,6 +66,21 @@ PRESET_HELP = {
 
 _RED_SUCCESS = re.compile(r"^p_(phish|exploit|escalate|lateral|exfiltrate)(_|$)")
 _RUN_ID_TS = re.compile(r"^(\d{8}-\d{6})")
+
+
+# ============================================================================================== public mode
+
+
+class PublicModeError(RuntimeError):
+    """A process or file write was requested while the dashboard runs as the public, read-only showcase."""
+
+
+def refuse_in_public(what: str) -> None:
+    """Server-side guard (docs/contracts.md, "Public showcase (v6)"): with ``config.PUBLIC`` set, nothing may start
+    or kill a process or write a file, whatever the UI shows. Read at call time, so tests can flip it."""
+    if getattr(config, "PUBLIC", False):
+        raise PublicModeError(f"{what} is disabled in the public showcase (CYBERARENA_PUBLIC=1): it is read-only "
+                              "and never starts or stops processes.")  # fmt: skip
 
 
 # ============================================================================================== small file I/O
@@ -103,6 +119,7 @@ def read_json(path: Path) -> dict | None:
 
 
 def write_json_atomic(path: Path, obj: dict) -> None:
+    refuse_in_public("Writing files")
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -237,6 +254,7 @@ def parse_spec(text: str) -> dict:
 
 def load_param_spec(python: str | None = None, cwd: Path | None = None, timeout: float = 120) -> dict:
     """Run ``train --describe-params`` once and return the parsed spec. Raises :class:`SpecError`."""
+    refuse_in_public("Reading the parameter list (a subprocess)")
     cmd = describe_params_cmd(python)
     try:
         proc = subprocess.run(
@@ -555,6 +573,7 @@ KILLABLE_MODULES = (RUNNER_MODULE, "cyberarena.arena.train", "cyberarena.arena.e
 
 def process_cmdline(pid: int) -> str | None:
     """Command line of a live process, or None if it can't be read."""
+    refuse_in_public("Inspecting processes")
     try:
         if os.name == "nt":
             out = _REAL_SUBPROCESS.run(
@@ -571,6 +590,7 @@ def process_cmdline(pid: int) -> str | None:
 def kill_tree(pid: Any) -> None:
     """Force-kill a Lab runner (or its train child) and its children. Refuses any PID whose command line
     isn't one of ours, so a recycled PID never takes down an unrelated process tree."""
+    refuse_in_public("Killing processes")
     try:
         pid = int(pid)
     except (TypeError, ValueError):
@@ -609,6 +629,7 @@ def job_path(runs_dir: Path, token: str) -> Path:
 
 def save_job(job: dict) -> None:
     """Write the job record to its ``.lab`` file and, once the run directory is known, ``lab_status.json``."""
+    refuse_in_public("Writing Lab job files")
     job["updated"] = now_iso()
     write_json_atomic(Path(job["job_file"]), job)
     if job.get("run_dir"):
@@ -690,6 +711,7 @@ def launch_job(
     cwd: Path | None = None,
 ) -> dict:
     """Write the job file and start the detached runner. Refuses while another Lab job is active."""
+    refuse_in_public("Launching a training run")
     busy = active_job(runs_dir)
     if busy:
         raise LabBusyError(f"a Lab run is already active ({busy.get('run_id') or busy.get('token')})")
@@ -749,6 +771,7 @@ def stop_requested_at(job: dict | None) -> datetime | None:
 def request_stop(job: dict) -> None:
     """Ask the runner to cancel: it sends CTRL_BREAK_EVENT (POSIX: SIGINT) to its child, so train can write
     ``progress.json`` status ``error``/``cancelled`` before exiting (code 130)."""
+    refuse_in_public("Stopping a run")
     p = stop_path(job)
     if not p.exists():
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -758,6 +781,7 @@ def request_stop(job: dict) -> None:
 def stop_job(job: dict, force: bool = False) -> dict:
     """Stop a Lab job. Gracefully through the runner when it is alive; otherwise (or with ``force``) kill the
     runner and child process trees and mark the job stopped ourselves."""
+    refuse_in_public("Stopping a run")
     if not force and pid_alive(job.get("pid")):
         request_stop(job)
         return job
@@ -779,6 +803,7 @@ def is_run_dir(p: Path) -> bool:
     return (
         p.is_dir()
         and not p.name.startswith(".")
+        and p.name not in L.NOT_RUNS  # the showcase export folder (v6)
         and any(
             (p / f).exists()
             for f in (CONFIG_FILE, PROGRESS_FILE, STATUS_FILE, L.SUMMARY_FILE, L.EPISODES_FILE)
@@ -1041,6 +1066,7 @@ def launch_experiment(runs_dir: Path, name: str, cmd: list[str], *, python: str 
                       cwd: Path | None = None) -> dict:  # fmt: skip
     """Start an experiment through the detached runner (so Stop can deliver CTRL_BREAK to it). Refuses while
     another Lab job is active: the experiment uses most CPU cores."""
+    refuse_in_public("Launching an experiment")
     busy = active_job(runs_dir)
     if busy:
         raise LabBusyError(f"a Lab job is already active ({busy.get('run_id') or busy.get('exp_name') or busy.get('token')})")
@@ -1067,3 +1093,31 @@ def launch_experiment(runs_dir: Path, name: str, cmd: list[str], *, python: str 
         cur["pid"] = proc.pid
         save_job(cur)
     return cur
+
+
+# ============================================================================================== showcase export
+
+SHOWCASE_MODULE = "cyberarena.showcase"
+
+
+def showcase_export_cmd(python: str | None = None, extra: list[str] | None = None) -> list[str]:
+    """``python -m cyberarena.showcase`` (reads ``runs/.showcase.json`` when no selection is passed)."""
+    return [python or sys.executable, "-m", SHOWCASE_MODULE, *(extra or [])]
+
+
+def run_showcase_export(python: str | None = None, cwd: Path | None = None, extra: list[str] | None = None,
+                        timeout: float = 600) -> dict:  # fmt: skip
+    """Run the export as a subprocess and wait for it: ``{"cmd", "returncode", "output"}`` (stdout + stderr)."""
+    refuse_in_public("Exporting the showcase (a subprocess)")
+    cmd = showcase_export_cmd(python, extra)
+    try:
+        proc = subprocess.run(
+            cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=timeout,
+            cwd=str(cwd) if cwd else None, env=child_env(), creationflags=_no_window_flag(), check=False,
+        )  # fmt: skip
+    except FileNotFoundError as e:
+        return {"cmd": cmd, "returncode": -1, "output": f"could not start {cmd[0]!r}: {e}"}
+    except _REAL_SUBPROCESS.TimeoutExpired:
+        return {"cmd": cmd, "returncode": -1, "output": f"timed out after {timeout:.0f}s"}
+    out = "\n".join(x for x in ((proc.stdout or "").strip(), (proc.stderr or "").strip()) if x)
+    return {"cmd": cmd, "returncode": proc.returncode, "output": out}

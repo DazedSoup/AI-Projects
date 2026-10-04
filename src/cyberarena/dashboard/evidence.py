@@ -31,6 +31,21 @@ METRIC_ORDER = ("blue_learned_vs_red_evasive@0.7", "blue_learned_vs_red_baseline
                 "red_learned_vs_blue_baseline")  # fmt: skip
 
 
+def run_dir_of(raw: str, runs_dir: Path | None) -> Path:
+    """A manifest's ``run_dir`` (an absolute path on the machine that ran the experiment, often Windows) resolved
+    against ``runs_dir`` first, so a copied or exported runs folder (the public showcase) finds its runs."""
+    if runs_dir is not None:
+        local = Path(runs_dir) / L.path_name(raw)
+        if local.exists():
+            return local
+    return Path(raw)
+
+
+def runs_root(exp_dir: Path) -> Path:
+    """``runs/`` for ``runs/experiments/<name>``."""
+    return Path(exp_dir).parent.parent
+
+
 def _read(path: Path) -> dict | None:
     try:
         obj = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -99,7 +114,7 @@ def experiment_rules(e: dict, man: dict | None = None) -> str | None:
     if any("r_isolate_false" in a for a in extra):
         return "custom"
     for r in man.get("runs") or []:
-        cfg = _read(Path(r["run_dir"]) / L.CONFIG_FILE) if r.get("run_dir") else None
+        cfg = _read(run_dir_of(r["run_dir"], runs_root(e["dir"])) / L.CONFIG_FILE) if r.get("run_dir") else None
         if cfg is not None:
             rules = (cfg.get("params") or {}).get("rules")
             return "previous" if rules in (None, "cheap-isolation") else "current"
@@ -120,18 +135,18 @@ def load_aggregate(exp_dir: Path) -> dict | None:
     return _read(Path(exp_dir) / "aggregate.json")
 
 
-def run_progress(man: dict) -> pd.DataFrame:
+def run_progress(man: dict, runs_dir: Path | None = None) -> pd.DataFrame:
     """One row per (seed, condition) run with its live progress from ``progress.json``."""
     rows = []
     for r in man.get("runs") or []:
-        prog = _read(Path(r["run_dir"]) / L.PROGRESS_FILE) if r.get("run_dir") else None
+        prog = _read(run_dir_of(r["run_dir"], runs_dir) / L.PROGRESS_FILE) if r.get("run_dir") else None
         ep, n = (prog or {}).get("episode"), (prog or {}).get("episodes") or man.get("episodes")
         status = r.get("status") or "pending"
         if status == "running" and prog and prog.get("status") == "done":
             status = "finishing"
         frac = 1.0 if status == "done" else (min(1.0, ep / n) if ep and n else 0.0)
         rows.append({"seed": r.get("seed"), "condition": r.get("condition"), "status": status,
-                     "progress": frac, "game": ep, "games": n, "run_id": Path(r["run_dir"]).name if r.get("run_dir") else "",
+                     "progress": frac, "game": ep, "games": n, "run_id": L.path_name(r["run_dir"]) if r.get("run_dir") else "",
                      "error": r.get("error") or ""})  # fmt: skip
     return pd.DataFrame(rows, columns=["seed", "condition", "status", "progress", "game", "games", "run_id", "error"])
 

@@ -75,7 +75,8 @@ if opened is not None and opened in set(catalog["episode"]):
     _reset_turn()
 
 if catalog.empty:
-    T.empty_state("No games to replay", "This run has no logged games yet.")
+    T.empty_state("No games to replay", "This run's game log is " + common.NOT_IN_SHOWCASE + "."
+                  if common.public() else "This run has no logged games yet.")  # fmt: skip
     st.stop()
 
 kinds = [k for k in L.GAME_KINDS if (catalog["kind"] == k).any()]
@@ -127,8 +128,10 @@ if mode == SINGLE:
     )
 if graph is None:
     T.empty_state(
-        "Network layout missing", "<code>graph.json</code> is missing for this run, so it can't be drawn."
-    )
+        "Network layout missing",
+        "<code>graph.json</code> is " + (common.NOT_IN_SHOWCASE if common.public() else "missing")
+        + " for this run, so it can't be drawn.",
+    )  # fmt: skip
     st.stop()
 
 
@@ -203,7 +206,8 @@ if mode == COMPARE:
             "No probe games in this run",
             "Probe games are one fixed-seed game per matchup, replayed at every checkpoint so you can watch the same "
             "situation handled by an earlier and a later agent. Runs with adaptive learning log them "
-            '(<code>"probe_game": true</code>); this run predates them.',
+            '(<code>"probe_game": true</code>); '
+            + ("they are " + common.NOT_IN_SHOWCASE + " for this run." if common.public() else "this run predates them."),
         )
         st.stop()
     T.caption(
@@ -228,7 +232,8 @@ if mode == COMPARE:
         ep, turns = games[c]
         if not turns:
             with col, common.card(f"cmp{slot}"):
-                T.empty_state(f"Checkpoint {c:,}", "This probe game has no turn records.")
+                T.empty_state(f"Checkpoint {c:,}", "This probe game's turns are " + common.NOT_IN_SHOWCASE + "."
+                              if common.public() else "This probe game has no turn records.")  # fmt: skip
             continue
         idx = min(ss.cmp_turn, len(turns) - 1)
         t = turns[idx]
@@ -269,8 +274,10 @@ if mode == COMPARE:
 turns = common.game_turns(run, int(episode))
 if not turns:
     T.empty_state(
-        f"Game {episode} has no turn records", "The summary lists it, but the log doesn't contain it."
-    )
+        f"Game {episode} has no turn records",
+        "Its turns are " + common.NOT_IN_SHOWCASE + ": the showcase keeps the narrated and probe games only."
+        if common.public() else "The summary lists it, but the log doesn't contain it.",
+    )  # fmt: skip
     st.stop()
 n = len(turns)
 last = turns[-1]

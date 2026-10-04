@@ -233,7 +233,8 @@ if not (lr is not None and lr.dqn):
     tiles.append(
         T.tile("Q-states learned", "—" if qs_now is None else f"{qs_now:,}",
                T.delta_html(None if qs_first is None else qs_now - qs_first, "{:,.0f}", qs_src) if qs_now is not None
-               else "no Q-tables saved", empty=qs_now is None,
+               else ("Q-table checkpoints " + common.NOT_IN_SHOWCASE if common.public() else "no Q-tables saved"),
+               empty=qs_now is None,
                help="Distinct situations in the red and blue Q-tables combined."))  # fmt: skip
 T.tiles(tiles)
 
@@ -278,7 +279,8 @@ with right, common.card("armsrace"):
         T.empty_state(
             "This run predates adaptive learning",
             "It has no <code>learning.jsonl</code>: detectors stayed fixed and red never adapted its evasion. "
-            "Train a new run with adaptive learning on to see the arms race here.",
+            + ("Pick another run in the sidebar to see the arms race." if common.public()
+               else "Train a new run with adaptive learning on to see the arms race here."),
         )
     else:
         # the sensor with the clearest back-and-forth tells the story best in a compact preview
@@ -337,8 +339,10 @@ with right, common.card("bestgame"):
     pick = best_replay()
     if pick is None:
         T.empty_state(
-            "No narrated games yet", "Run enrichment to narrate a selection of games, then replay them."
-        )
+            "No narrated games yet",
+            "Narrated games for this run are " + common.NOT_IN_SHOWCASE + "." if common.public()
+            else "Run enrichment to narrate a selection of games, then replay them.",
+        )  # fmt: skip
     else:
         ep, why = pick
         turns = enr[ep]

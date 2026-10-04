@@ -434,6 +434,10 @@ details.ca-more p { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; color:
                   background: linear-gradient(135deg, var(--ca-red), var(--ca-blue)); color: #fff; font-weight: 700; font-size: 13px; }
 .ca-brand .name { font-weight: 650; font-size: 15px; letter-spacing: -0.01em; }
 .ca-brand .tag { font-size: 11px; color: var(--ca-muted); }
+.ca-public { font-size: 12px; line-height: 1.5; color: var(--ca-ink2); border: 1px solid var(--ca-line2);
+             border-radius: 8px; padding: 8px 10px; margin: 4px 0 8px; background: var(--ca-tint); }
+.ca-public b { color: inherit; font-weight: 620; }
+.ca-public a { display: inline-block; margin-top: 4px; font-weight: 560; }
 
 /* charts sit directly on the card: Streamlit paints the theme background into the SVG, undo that */
 [data-testid="stPlotlyChart"] .main-svg { background: transparent !important; }

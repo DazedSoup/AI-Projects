@@ -16,6 +16,7 @@ import streamlit as st
 from cyberarena.dashboard import charts, common
 from cyberarena.dashboard import evidence as E
 from cyberarena.dashboard import loaders as L
+from cyberarena.dashboard import showcase as SC
 from cyberarena.dashboard import theme as T
 
 ss = st.session_state
@@ -62,6 +63,9 @@ exps = experiments()
 fams = E.factorial_families(exps)
 if not exps:
     with common.card("ev-empty"):
+        if common.public():
+            T.empty_state("No experiments in this showcase", "The author hasn't published any multi-seed experiments.")
+            st.stop()
         T.empty_state(
             "No experiments yet",
             "An experiment trains the same setup several times with different seeds, once per condition (for example "
@@ -84,6 +88,28 @@ if ss.get("ev_exp") not in options:
     ss["ev_exp"] = d["name"] if d else options[0]
 
 
+def _publish_names(o: str) -> list[str]:
+    """Experiments behind one picker option (a factorial family publishes all its cells)."""
+    return [c["exp"]["name"] for c in fam_by[o]["cells"]] if o in fam_by else [o]
+
+
+def _on_publish(o: str, key: str) -> None:
+    for name in _publish_names(o):
+        SC.set_published(common.runs_dir(), "experiments", name, bool(ss[key]))
+
+
+def publish_toggle(o: str) -> None:
+    """Admin only: add or remove this experiment from the public showcase (``runs/.showcase.json``)."""
+    names = _publish_names(o)
+    published = set(SC.read_selection(common.runs_dir())["experiments"])
+    key = f"ev_publish:{o}"
+    ss[key] = all(n in published for n in names)  # always mirror the file (the Lab may have changed it)
+    st.toggle("Publish", key=key, on_change=_on_publish, args=(o, key),
+              help="Include this experiment in the public showcase (runs/.showcase.json). Export it from the "
+              "Showcase panel in the Simulation Lab." + (" A factorial publishes all of its cells." if o in fam_by
+                                                         else ""))  # fmt: skip
+
+
 def exp_label(o: str) -> str:
     if o in fam_by:
         f = fam_by[o]
@@ -99,6 +125,8 @@ with common.toolbar("evidence"):
                                 format_func=STATS.get,
                                 help="Second half of training: each seed's mean over checkpoints after half the games "
                                 "(steadier). Final checkpoint: the last evaluation only.")  # fmt: skip
+    if common.admin():
+        publish_toggle(choice)
 
 
 def stat_card(c: dict, key: str, span: float | None = None) -> None:
@@ -178,7 +206,7 @@ def methods(agg: dict | None, extra: str = "") -> None:
 
 def run_status_card(e: dict) -> None:
     man = E.load_manifest(e["dir"]) or {}
-    prog = E.run_progress(man)
+    prog = E.run_progress(man, E.runs_root(e["dir"]))
     with common.card("ev-running"):
         done = int((prog["status"] == "done").sum()) if not prog.empty else 0
         T.card_header(f"{e['name']}: {man.get('status', 'running')}",
@@ -301,7 +329,8 @@ conds = list(agg.get("conditions") or man.get("conditions") or [])
 names = E.experiment_condition_names(man, conds)
 used = agg.get("runs_used") or {}
 failed = agg.get("runs_failed") or []
-first_run = next((Path(r["run_dir"]) for r in man.get("runs") or [] if r.get("run_dir")), None)
+first_run = next((E.run_dir_of(r["run_dir"], common.runs_dir()) for r in man.get("runs") or [] if r.get("run_dir")),
+                 None)  # fmt: skip
 kind = L.agent_kind(common.info(first_run)) if first_run is not None and first_run.exists() else ""
 bits = [T.badge(f"{agg.get('n_seeds', len(e['seeds']))} seeds"),
         T.badge(f"{int(agg.get('episodes') or e.get('episodes') or 0):,} games per run")]  # fmt: skip
@@ -400,7 +429,7 @@ if ar:
 
 # ------------------------------------------------------------------------------------------------ cross-evaluation
 xe = E.load_crosseval(common.runs_dir())
-exp_runs = {Path(r["run_dir"]).name for r in man.get("runs") or [] if r.get("run_dir")}
+exp_runs = {L.path_name(r["run_dir"]) for r in man.get("runs") or [] if r.get("run_dir")}
 if not xe.empty and not (set(xe["blue_run"]) & exp_runs):
     xe = pd.DataFrame()  # the cross-evaluation belongs to another experiment's runs
 if not xe.empty:
@@ -480,7 +509,7 @@ def lessons() -> None:
                     items.append((f"2×2 diagnosis · {eff['factor']}", eff["verdict"]))
         xs = E.load_crosseval(common.runs_dir())
         if old is not None and not xs.empty and "isolate_clean_share" in xs:
-            old_runs = {Path(r["run_dir"]).name for r in (E.load_manifest(old["dir"]) or {}).get("runs") or []
+            old_runs = {L.path_name(r["run_dir"]) for r in (E.load_manifest(old["dir"]) or {}).get("runs") or []
                         if r.get("run_dir")}  # fmt: skip
             xs = xs[xs["blue_run"].isin(old_runs)]
             g = xs.groupby("detectors")["isolate_clean_share"].mean()

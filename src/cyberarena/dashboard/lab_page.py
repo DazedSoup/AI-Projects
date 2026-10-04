@@ -18,6 +18,7 @@ from cyberarena import config
 from cyberarena.dashboard import charts, common, lab
 from cyberarena.dashboard import evidence as E
 from cyberarena.dashboard import loaders as L
+from cyberarena.dashboard import showcase as SC
 from cyberarena.dashboard import theme as T
 
 RUNS_DIR = Path(config.RUNS_DIR)
@@ -427,7 +428,82 @@ def experiment_finished_panel(job: dict) -> None:
                 st.rerun()
 
 
+# ================================================================================================ showcase
+
+
+def _on_publish_run(run_id: str, key: str) -> None:
+    SC.set_published(RUNS_DIR, "runs", run_id, bool(ss[key]))
+
+
+def _on_default_run(key: str) -> None:
+    if ss.get(key):
+        SC.set_default_run(RUNS_DIR, ss[key])
+
+
+@st.cache_data(show_spinner="Estimating the export size (indexes each published run's game log once)…",
+               max_entries=8)  # fmt: skip
+def _estimate(runs_dir: str, runs: tuple, exps: tuple, default: str | None, stamp) -> dict:
+    plan = SC.make_plan(Path(runs_dir), list(runs), list(exps), default)
+    return {"bytes": plan.bytes, "files": len(plan.items) + 1, "warnings": plan.warnings,
+            "default": plan.default_run}  # fmt: skip
+
+
+def showcase_panel() -> None:
+    """What the public dashboard will show (``runs/.showcase.json``), its estimated size, and the export."""
+    pub = SC.read_selection(RUNS_DIR)
+    runs = [r for r in pub["runs"]]
+    exps = [e for e in pub["experiments"]]
+    with common.card("showcase"):
+        T.card_header("Showcase",
+                      "What the public, read-only dashboard shows. Select a row in the run history and switch on "
+                      "<b>Publish</b>; publish experiments from the Evidence page. Export writes the "
+                      f"<code>{SC.DEFAULT_OUT}/</code> folder that hosting serves "
+                      "(<code>CYBERARENA_PUBLIC=1</code>, <code>CYBERARENA_RUNS_DIR</code>).",
+                      right=T.badge(f"{len(runs)} runs · {len(exps)} experiments"))  # fmt: skip
+        if not runs and not exps:
+            T.caption("Nothing published yet.")
+        else:
+            rows = []
+            for r in runs:
+                d = RUNS_DIR / r
+                label = L.run_info(d)["label"] if d.is_dir() else "(missing from runs/)"
+                rows.append({"k": "run", "n": T.esc(label or "—"), "id": f'<span class="ca-id">{T.esc(r)}</span>'
+                             + (" · default" if r == pub["default_run"] else "")})  # fmt: skip
+            for e in exps:
+                ok = (RUNS_DIR / SC.EXPERIMENTS / e / "manifest.json").exists()
+                rows.append({"k": "experiment", "n": T.esc(e), "id": "" if ok else "(missing)"})
+            st.html(T.table([("k", "Kind"), ("n", "Label / name"), ("id", "Run id")], rows, height=260))
+            if runs:
+                key = "lab_showcase_default"
+                ss[key] = pub["default_run"] if pub["default_run"] in runs else runs[0]
+                st.selectbox("Public dashboard opens on", runs, key=key, on_change=_on_default_run, args=(key,),
+                             width=420, format_func=lambda r: lab.run_display_name(RUNS_DIR / r))  # fmt: skip
+            stamp = tuple(L.file_stamp(RUNS_DIR / r / f) for r in runs for f in (L.EPISODES_FILE, L.ENRICHED_FILE))
+            est = _estimate(str(RUNS_DIR), tuple(runs), tuple(exps), pub["default_run"], stamp)
+            over = est["bytes"] > SC.DEFAULT_MAX_MB * SC.MB
+            T.caption(f"Estimated export: <b>{est['bytes'] / SC.MB:.1f} MB</b> in {est['files']} files (limit "
+                      f"{SC.DEFAULT_MAX_MB:.0f} MB){' · <b>over the limit</b>' if over else ''}. Copies logs and "
+                      "summaries only: game logs are trimmed to the narrated and probe games; agent weights, detectors "
+                      "and checkpoints stay here.")  # fmt: skip
+            for w in est["warnings"]:
+                T.caption(T.esc(w))
+        cmd = lab.format_cmd(lab.showcase_export_cmd(PY))
+        if st.button("Export showcase", key="lab_showcase_export", icon=":material/publish:",
+                     disabled=not (runs or exps), help=f"Runs {cmd} in the repo folder and waits for it."):  # fmt: skip
+            with st.spinner("Exporting the showcase…"):
+                ss["lab_showcase_result"] = lab.run_showcase_export(PY, ROOT)
+        res = ss.get("lab_showcase_result")
+        if res:
+            (st.success if res["returncode"] == 0 else st.error)(
+                "Exported the showcase." if res["returncode"] == 0 else f"Export failed (exit code {res['returncode']}).")
+            st.code(res["output"] or "(no output)", language="text", wrap_lines=True)
+
+
 # ================================================================================================ page
+
+if common.public():  # never reached through navigation (the page isn't registered); defence in depth
+    T.empty_state("Not available in the public showcase", "The Simulation Lab only runs on the author's machine.")
+    st.stop()
 
 T.page_header(
     "Simulation Lab",
@@ -615,6 +691,9 @@ with common.card("history"):
             pass
     hist = lab.history_table(RUNS_DIR, spec, summaries)
     hist["changed"] = [readable_changed(spec, c) for c in hist["changed"]]
+    pub = SC.read_selection(RUNS_DIR)
+    hist.insert(1, "showcase", ["default" if r == pub["default_run"] else "published" if r in pub["runs"] else ""
+                                for r in hist["run_id"]])  # fmt: skip
     is_exp = hist["label"].fillna("").str.contains(" · seed ", regex=False)
     if is_exp.any():
         show_exp = st.toggle(f"Include the {int(is_exp.sum())} per-seed runs of experiments", value=False,
@@ -637,6 +716,8 @@ with common.card("history"):
         key="lab_hist",
         column_config={
             "label": st.column_config.TextColumn("Label"),
+            "showcase": st.column_config.TextColumn("Showcase", help="Published to the public showcase "
+                                                    "(select the row, then use Publish below)"),
             "run_id": st.column_config.TextColumn("Run id"),
             "started": st.column_config.DatetimeColumn("Started", format="MMM D, HH:mm"),
             "parent": st.column_config.TextColumn("Continued from", help="Warm-started from this run (side)"),
@@ -652,10 +733,16 @@ with common.card("history"):
     )  # fmt: skip
     rows = list(getattr(getattr(event, "selection", None), "rows", None) or [])
     sel = hist.iloc[rows] if rows else hist.iloc[0:0]
-    if not sel.empty and st.button(f"Open {sel.iloc[0]['run_id']} in Replay", key="lab_open_sel",
-                                   icon=":material/play_circle:"):  # fmt: skip
-        ss["_open_run"] = sel.iloc[0]["run_id"]
-        st.switch_page(common.PAGES["replay"])
+    if not sel.empty:
+        with st.container(horizontal=True, gap="medium", vertical_alignment="center"):
+            if st.button(f"Open {sel.iloc[0]['run_id']} in Replay", key="lab_open_sel", icon=":material/play_circle:"):
+                ss["_open_run"] = sel.iloc[0]["run_id"]
+                st.switch_page(common.PAGES["replay"])
+            for r in sel.itertuples(index=False):
+                key = f"lab_publish:{r.run_id}"
+                ss[key] = r.run_id in pub["runs"]  # mirror the file every rerun (Evidence may have changed it)
+                st.toggle(f"Publish {r.label or r.run_id}", key=key, on_change=_on_publish_run, args=(r.run_id, key),
+                          help=f"Include run {r.run_id} in the public showcase (runs/.showcase.json).")  # fmt: skip
 
 if not sel.empty:
     to_plot = []
@@ -690,3 +777,5 @@ if not sel.empty:
                 T.takeaway("Select a second run to compare.")
         else:
             T.empty_state("No checkpoints yet", "The selected runs have no evaluation rows yet.")
+
+showcase_panel()

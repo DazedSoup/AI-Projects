@@ -84,6 +84,16 @@ class RunFormatError(ValueError):
     """A run file exists but does not match docs/contracts.md."""
 
 
+# never run directories: the showcase selection file and export folder (docs/contracts.md, v6)
+NOT_RUNS = ("showcase", "experiments")
+
+
+def path_name(p) -> str:
+    """Last component of a path written on any OS: manifests record Windows paths (``C:\\...\\runs\\<id>``),
+    which ``Path(...).name`` doesn't split on Linux (the hosted dashboard)."""
+    return re.split(r"[\\/]", str(p).rstrip("\\/"))[-1]
+
+
 # ---------------------------------------------------------------------------------------------- run discovery
 
 
@@ -95,7 +105,8 @@ def list_runs(runs_dir: Path) -> list[Path]:
     runs = [
         p
         for p in runs_dir.iterdir()
-        if p.is_dir() and any((p / f).exists() for f in (SUMMARY_FILE, EPISODES_FILE, ENRICHED_FILE))
+        if p.is_dir() and not p.name.startswith(".") and p.name not in NOT_RUNS
+        and any((p / f).exists() for f in (SUMMARY_FILE, EPISODES_FILE, ENRICHED_FILE))
     ]
     return sorted(runs, key=lambda p: p.name, reverse=True)
 
@@ -361,12 +372,17 @@ def scan_episode_index(path: Path) -> tuple[dict[int, list[tuple[int, int]]], di
     return segments, meta
 
 
-def build_episode_index(run_dir: Path, cache_dir: Path | None = None) -> EpisodeIndex | None:
-    """Index ``episodes.jsonl`` by episode, reusing an on-disk cache when the file is unchanged."""
+def build_episode_index(run_dir: Path, cache_dir: Path | None = None, disk_cache: bool = True) -> EpisodeIndex | None:
+    """Index ``episodes.jsonl`` by episode, reusing an on-disk cache (in the system temp dir, never the run
+    directory) when the file is unchanged. ``disk_cache=False`` (the public showcase) neither reads nor writes
+    the cache: the index lives in memory only (``st.cache_data``)."""
     path = Path(run_dir) / EPISODES_FILE
     if not path.exists():
         return None
     st_ = path.stat()
+    if not disk_cache:
+        segs, meta = scan_episode_index(path)
+        return EpisodeIndex(str(path), st_.st_size, st_.st_mtime_ns, segs, meta)
     cache = _index_cache_path(path, st_.st_size, st_.st_mtime_ns, cache_dir)
     if cache.exists():
         try:
@@ -801,14 +817,14 @@ def cached_enriched(run_dir: str, stamp: tuple | None = None) -> dict[int, list[
 
 
 @_cache
-def cached_index(run_dir: str, size: int, mtime_ns: int) -> EpisodeIndex | None:
+def cached_index(run_dir: str, size: int, mtime_ns: int, disk_cache: bool = True) -> EpisodeIndex | None:
     # size/mtime are part of the cache key so a rewritten log is re-indexed
-    return build_episode_index(Path(run_dir))
+    return build_episode_index(Path(run_dir), disk_cache=disk_cache)
 
 
 @_cache
-def cached_episode(run_dir: str, episode: int, size: int, mtime_ns: int) -> list[dict]:
-    index = cached_index(run_dir, size, mtime_ns)
+def cached_episode(run_dir: str, episode: int, size: int, mtime_ns: int, disk_cache: bool = True) -> list[dict]:
+    index = cached_index(run_dir, size, mtime_ns, disk_cache)
     return read_episode(index, episode) if index else []
 
 
