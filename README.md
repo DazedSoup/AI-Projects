@@ -14,7 +14,7 @@ THANK YOU! :)
 
 | Project | What it is | Live showcase |
 |---|---|---|
-| [**cyberarena**](#cyberarena) | Red-team vs blue-team reinforcement learning in a simulated network. TensorFlow agents learn which hosts to attack and defend, blue's detectors retrain online as red learns to disguise itself, and every move is explained. | Streamlit app, from the `CyberArena-Showcase` branch |
+| [**cyberarena**](#cyberarena) | Red-team vs blue-team reinforcement learning in a simulated network. TensorFlow agents learn which hosts to attack and defend, blue's detectors retrain online as red learns to disguise itself, and every move is explained. | [cyberarenashowcase.streamlit.app](https://cyberarenashowcase.streamlit.app/) |
 
 ---
 
@@ -26,6 +26,8 @@ disguise its activity. Every move is explained (SHAP, integrated gradients, MITR
 Streamlit dashboard.
 
 ![ci](https://github.com/DazedSoup/ai-solutions/actions/workflows/ci.yml/badge.svg)
+
+**Live showcase:** [https://cyberarenashowcase.streamlit.app/](https://cyberarenashowcase.streamlit.app/) (read-only; it may take up to a minute to wake up)
 
 > **Simulation only.** Hosts are graph nodes, attacks are abstract actions that flip node state by probability, and
 > "evasion" is interpolation between dataset rows in feature space. Nothing here touches a real network or contains
