@@ -111,3 +111,13 @@ def test_reassemble_keeps_the_space_git_checkout(tmp_path):
     assert (out / ".git" / "config").read_text() == "[remote]\n"
     assert not (out / "stale.txt").exists()
     assert (out / "PUBLIC_SHOWCASE").exists()
+
+
+def test_rebuild_keeps_an_edited_readme(tmp_path):
+    root, showcase = _fake_root(tmp_path)
+    out = tmp_path / "bundle"
+    deploy.assemble(out, showcase, root=root)
+    assert deploy.MAIN_FILE in (out / "README.md").read_text(encoding="utf-8")  # default on first build
+    (out / "README.md").write_text("")  # the owner empties it on GitHub
+    deploy.assemble(out, showcase, root=root)
+    assert (out / "README.md").read_text() == ""

@@ -27,6 +27,7 @@ TARGETS = ("streamlit", "hf-docker")
 SPACE_PORT = 7860
 PACKAGE_FILES = ("__init__.py", "config.py", "showcase.py")
 MAIN_FILE = "src/cyberarena/dashboard/app.py"
+KEEP_ON_REBUILD = (".git", "README.md")
 
 DOCKERFILE = f"""FROM python:3.12-slim
 
@@ -91,9 +92,9 @@ def assemble(out: Path, showcase: Path, root: Path | None = None, target: str = 
     root = root or config.ROOT
     if not (showcase / "MANIFEST.json").exists():
         raise FileNotFoundError(f"{showcase} has no MANIFEST.json; run `python -m cyberarena.showcase` first")
-    if out.exists():  # rebuild everything except the bundle's own git checkout, so later deploys are plain pushes
+    if out.exists():  # rebuild everything except the bundle's git checkout and its README, which the owner may edit
         for child in out.iterdir():
-            if child.name == ".git":
+            if child.name in KEEP_ON_REBUILD:
                 continue
             shutil.rmtree(child) if child.is_dir() else child.unlink()
     pkg_src, pkg_dst = root / "src" / "cyberarena", out / "src" / "cyberarena"
@@ -115,7 +116,7 @@ def assemble(out: Path, showcase: Path, root: Path | None = None, target: str = 
         # Hugging Face rejects plain-git files over 10 MB; store the showcase data with git-lfs.
         (out / ".gitattributes").write_text("showcase/** filter=lfs diff=lfs merge=lfs -text\n", encoding="utf-8",
                                             newline="\n")  # fmt: skip
-    else:
+    elif not (out / "README.md").exists():  # first build only; afterwards the README is the owner's
         (out / "README.md").write_text(STREAMLIT_README, encoding="utf-8", newline="\n")
     size = sum(p.stat().st_size for p in out.rglob("*") if p.is_file() and ".git" not in p.relative_to(out).parts)
     return {"out": str(out), "bytes": size, "target": target,
