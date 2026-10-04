@@ -1,7 +1,0 @@
-{"kind": "eval", "after_episode": 0, "matchup": "red_learned_vs_blue_baseline", "n": 2, "red_win_rate": 0.0, "blue_win_rate": 1.0, "episodes": [7, 8]}
-{"kind": "episode", "episode": 0, "winner": "blue", "turns": 2, "red_return": 0.0, "blue_return": 0.0, "epsilon": 0.5, "matchup": "learned_vs_learned", "logged": true}
-{"kind": "episode", "episode": 1, "winner": "red", "turns": 2, "red_return": 0.0, "blue_return": 0.0, "epsilon": 0.5, "matchup": "red_learned_vs_blue_baseline", "logged": false}
-{"kind": "episode", "episode": 2, "winner": "red", "turns": 2, "red_return": 0.0, "blue_return": 0.0, "epsilon": 0.5, "matchup": "learned_vs_learned", "logged": false}
-{"kind": "episode", "episode": 3, "winner": "red", "turns": 2, "red_return": 0.0, "blue_return": 0.0, "epsilon": 0.5, "matchup": "learned_vs_learned", "logged": false}
-{"kind": "eval", "after_episode": 4, "matchup": "red_learned_vs_blue_baseline", "n": 1, "red_win_rate": 1.0, "blue_win_rate": 0.0, "episodes": [5, 5]}
-{"kind": "eval", "after_episode": 4, "matchup": "blue_learned_vs_red_baseline", "n": 1, "red_win_rate": 0.0, "blue_win_rate": 1.0, "episodes": [6, 6]}

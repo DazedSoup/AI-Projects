@@ -1,8 +1,0 @@
-# Minimal dependencies for the hosted, read-only dashboard (no TensorFlow / SHAP / training).
-# Versions match requirements-lock.txt. The dashboard never imports cyberarena.arena / .ml / .explain.
-streamlit==1.64.0
-plotly==7.1.0
-pandas==3.0.6
-numpy==2.5.3
-scipy==1.18.1
-networkx==3.7

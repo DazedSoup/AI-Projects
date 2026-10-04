@@ -1,1 +1,0 @@
-{"status": "done", "phase": "done", "episode": 2000, "episodes": 2000, "started": "2026-10-03T11:03:49", "updated": "2026-10-03T11:07:09", "last_eval": {"after_episode": 2000, "red_win_rate": 0.8, "blue_win_rate": 0.74, "evasive_blue_win_rate": {"0.4": 0.8, "0.7": 0.79}}, "error": null}
