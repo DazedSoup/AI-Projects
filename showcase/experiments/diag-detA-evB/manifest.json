@@ -1,0 +1,77 @@
+{
+ "name": "diag-detA-evB",
+ "created": "2026-10-03T05:27:26",
+ "episodes": 2000,
+ "seeds": [
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "conditions": [
+  "adaptive"
+ ],
+ "extra_args": [],
+ "jobs": 5,
+ "status": "done",
+ "finished": "2026-10-03T05:31:24",
+ "wall_time_s": 237.3,
+ "runs": [
+  {
+   "seed": 1,
+   "condition": "adaptive",
+   "run_dir": "20261003-052729-1",
+   "status": "done",
+   "log": "logs/adaptive_seed1.log",
+   "started": "2026-10-03T05:27:26",
+   "finished": "2026-10-03T05:31:21",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 2,
+   "condition": "adaptive",
+   "run_dir": "20261003-052730-2",
+   "status": "done",
+   "log": "logs/adaptive_seed2.log",
+   "started": "2026-10-03T05:27:26",
+   "finished": "2026-10-03T05:31:22",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 3,
+   "condition": "adaptive",
+   "run_dir": "20261003-052729-3",
+   "status": "done",
+   "log": "logs/adaptive_seed3.log",
+   "started": "2026-10-03T05:27:26",
+   "finished": "2026-10-03T05:31:23",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 4,
+   "condition": "adaptive",
+   "run_dir": "20261003-052729-4",
+   "status": "done",
+   "log": "logs/adaptive_seed4.log",
+   "started": "2026-10-03T05:27:26",
+   "finished": "2026-10-03T05:31:20",
+   "returncode": 0,
+   "error": null
+  },
+  {
+   "seed": 5,
+   "condition": "adaptive",
+   "run_dir": "20261003-052729-5",
+   "status": "done",
+   "log": "logs/adaptive_seed5.log",
+   "started": "2026-10-03T05:27:26",
+   "finished": "2026-10-03T05:31:20",
+   "returncode": 0,
+   "error": null
+  }
+ ]
+}

@@ -1,0 +1,328 @@
+{
+ "run": "20261003-110349-7",
+ "output": "episodes_enriched.jsonl",
+ "mode": "offline",
+ "narration_model": "claude-haiku-4-5",
+ "episodes": [
+  {
+   "episode": 6839,
+   "matchup": "red_learned_vs_blue_baseline",
+   "after_episode": 2000,
+   "winner": "red",
+   "turns": 29,
+   "reason": "median-length red win"
+  },
+  {
+   "episode": 6841,
+   "matchup": "red_learned_vs_blue_baseline",
+   "after_episode": 2000,
+   "winner": "blue",
+   "turns": 72,
+   "reason": "median-length blue win"
+  },
+  {
+   "episode": 6832,
+   "matchup": "red_learned_vs_blue_baseline",
+   "after_episode": 2000,
+   "winner": "red",
+   "turns": 19,
+   "reason": "shortest red win"
+  },
+  {
+   "episode": 7033,
+   "matchup": "blue_learned_vs_red_baseline",
+   "after_episode": 2000,
+   "winner": "blue",
+   "turns": 36,
+   "reason": "median-length blue win"
+  },
+  {
+   "episode": 7035,
+   "matchup": "blue_learned_vs_red_baseline",
+   "after_episode": 2000,
+   "winner": "blue",
+   "turns": 72,
+   "reason": "median-length remaining episode (blue win)"
+  },
+  {
+   "episode": 7034,
+   "matchup": "blue_learned_vs_red_baseline",
+   "after_episode": 2000,
+   "winner": "blue",
+   "turns": 24,
+   "reason": "median-length remaining episode (blue win)"
+  },
+  {
+   "episode": 2401,
+   "matchup": "blue_learned_vs_red_baseline",
+   "after_episode": 0,
+   "winner": "blue",
+   "turns": 72,
+   "reason": "probe game, first checkpoint (after 0)"
+  },
+  {
+   "episode": 2200,
+   "matchup": "red_learned_vs_blue_baseline",
+   "after_episode": 0,
+   "winner": "blue",
+   "turns": 72,
+   "reason": "probe game, first checkpoint (after 0)"
+  },
+  {
+   "episode": 7233,
+   "matchup": "blue_learned_vs_red_baseline",
+   "after_episode": 2000,
+   "winner": "blue",
+   "turns": 72,
+   "reason": "probe game, last checkpoint (after 2000)"
+  },
+  {
+   "episode": 7032,
+   "matchup": "red_learned_vs_blue_baseline",
+   "after_episode": 2000,
+   "winner": "red",
+   "turns": 37,
+   "reason": "probe game, last checkpoint (after 2000)"
+  },
+  {
+   "episode": 7435,
+   "matchup": "blue_learned_vs_red_evasive",
+   "after_episode": 2000,
+   "winner": "blue",
+   "turns": 72,
+   "reason": "evading-red probe game at evasion 0.7, final checkpoint (after 2000)"
+  }
+ ],
+ "turns": 577,
+ "timing_s": {
+  "index": 0.52,
+  "enrich": 50.97,
+  "total": 51.58,
+  "shap": 50.33,
+  "ig": 0.58,
+  "shap_per_turn": 0.0872,
+  "ig_per_turn": 0.001,
+  "lock_wait": 0.0
+ },
+ "agent_attribution": {
+  "method": "integrated_gradients",
+  "turns_attributed": 290,
+  "computed": 290,
+  "cache_hits": 0,
+  "null_reasons": {
+   "not a DQN decision": 287
+  },
+  "models_loaded": 4,
+  "load_seconds": 0.13,
+  "seconds_computing": 0.095,
+  "integration": {
+   "exact_piecewise_linear": 290
+  },
+  "baselines": {
+   "candidate_mean": 290
+  },
+  "max_completeness_abs": 0.0,
+  "max_completeness_rel": 0.0,
+  "max_q_vs_logged": 0.00018,
+  "max_baseline_check_error": 0.0,
+  "checkpoints": [
+   "agents/checkpoints/blue_qnet_00000.keras",
+   "agents/checkpoints/blue_qnet_02000.keras",
+   "agents/checkpoints/red_qnet_00000.keras",
+   "agents/checkpoints/red_qnet_02000.keras"
+  ]
+ },
+ "shap": {
+  "settings": {
+   "nsamples": 2000,
+   "background_k": 50,
+   "background_pool": 1000,
+   "top_k": 5
+  },
+  "rows": 659,
+  "computed": 594,
+  "cache_hits": 65,
+  "seconds_computing": 49.96,
+  "seconds_per_row": {
+   "malware": 0.0787,
+   "network": 0.1074,
+   "phishing": 0.0513
+  },
+  "max_additivity_error": 0.0,
+  "versions": [
+   0,
+   20
+  ],
+  "skipped_missing_detector": {}
+ },
+ "adaptation": {
+  "adaptive": true,
+  "learning_jsonl": true,
+  "detector_updates": 60,
+  "turns_with_adaptation": 577,
+  "turns_updated_since_last_move": 22
+ },
+ "narration": {
+  "prompts": 0,
+  "cache_hits": 0,
+  "api_calls": 0,
+  "template": 577,
+  "refusals": 0,
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "prompt_chars": null
+ },
+ "online_cost_estimate": {
+  "total": {
+   "model": "claude-haiku-4-5",
+   "calls": 577,
+   "input_tokens": 340010,
+   "output_tokens": 40390,
+   "usd": 0.54196,
+   "price_per_mtok": {
+    "input": 1.0,
+    "output": 5.0
+   },
+   "method": "chars/3.5 estimate, ~70 output tokens per call"
+  },
+  "per_episode": {
+   "6839": {
+    "model": "claude-haiku-4-5",
+    "calls": 29,
+    "input_tokens": 18204,
+    "output_tokens": 2030,
+    "usd": 0.028354,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "6841": {
+    "model": "claude-haiku-4-5",
+    "calls": 72,
+    "input_tokens": 47121,
+    "output_tokens": 5040,
+    "usd": 0.072321,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "6832": {
+    "model": "claude-haiku-4-5",
+    "calls": 19,
+    "input_tokens": 13145,
+    "output_tokens": 1330,
+    "usd": 0.019795,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "7033": {
+    "model": "claude-haiku-4-5",
+    "calls": 36,
+    "input_tokens": 19965,
+    "output_tokens": 2520,
+    "usd": 0.032565,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "7035": {
+    "model": "claude-haiku-4-5",
+    "calls": 72,
+    "input_tokens": 40639,
+    "output_tokens": 5040,
+    "usd": 0.065839,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "7034": {
+    "model": "claude-haiku-4-5",
+    "calls": 24,
+    "input_tokens": 13344,
+    "output_tokens": 1680,
+    "usd": 0.021744,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "2401": {
+    "model": "claude-haiku-4-5",
+    "calls": 72,
+    "input_tokens": 37841,
+    "output_tokens": 5040,
+    "usd": 0.063041,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "2200": {
+    "model": "claude-haiku-4-5",
+    "calls": 72,
+    "input_tokens": 40847,
+    "output_tokens": 5040,
+    "usd": 0.066047,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "7233": {
+    "model": "claude-haiku-4-5",
+    "calls": 72,
+    "input_tokens": 41136,
+    "output_tokens": 5040,
+    "usd": 0.066336,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "7032": {
+    "model": "claude-haiku-4-5",
+    "calls": 37,
+    "input_tokens": 22273,
+    "output_tokens": 2590,
+    "usd": 0.035223,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   },
+   "7435": {
+    "model": "claude-haiku-4-5",
+    "calls": 72,
+    "input_tokens": 45495,
+    "output_tokens": 5040,
+    "usd": 0.070695,
+    "price_per_mtok": {
+     "input": 1.0,
+     "output": 5.0
+    },
+    "method": "chars/3.5 estimate, ~70 output tokens per call"
+   }
+  }
+ },
+ "mitre": {
+  "attack_version": "v16",
+  "d3fend_version": "1.0.0",
+  "mapping_version": 1
+ }
+}

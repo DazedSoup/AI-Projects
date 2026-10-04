@@ -1,0 +1,464 @@
+{
+ "run_id": "20261003-110349-4",
+ "seed": 4,
+ "episodes": 2000,
+ "graph_seed": 4,
+ "n_nodes": 15,
+ "crown_jewel": 14,
+ "label": "main \u00b7 adaptive \u00b7 seed 4",
+ "adaptive": true,
+ "init_from": null,
+ "params": {
+  "seed": 4,
+  "n_nodes": null,
+  "rules": "default",
+  "episodes": 2000,
+  "eval_every": 250,
+  "eval_n": 200,
+  "eval_log_n": 10,
+  "agent": "dqn",
+  "dqn_lr": 0.001,
+  "dqn_hidden": "64,64",
+  "dqn_gamma": 0.95,
+  "n_step": 3,
+  "replay_size": 10000,
+  "batch_size": 64,
+  "target_sync": 250,
+  "train_every": 4,
+  "alpha": 0.1,
+  "alpha_end": 0.01,
+  "gamma": 0.9,
+  "eps_start": 1.0,
+  "eps_end": 0.02,
+  "eps_decay_frac": 0.6,
+  "eval_evasion_levels": "0.4,0.7",
+  "eval_evasive_n": 100,
+  "baseline": "heuristic",
+  "red_baseline_noise": 0.3,
+  "blue_baseline_noise": 0.4,
+  "init_side": "both",
+  "adaptive": true,
+  "detector_lr": 0.001,
+  "detector_update_every": 100,
+  "detector_min_samples": 32,
+  "evasion_cost": 0.25,
+  "red_evasion_lr": 0.1,
+  "red_evasion_explore": 0.1,
+  "red_detect_penalty": 0.1,
+  "adaptive_pool_size": 1024,
+  "detectors": "auto",
+  "red_evasion": "auto",
+  "blue_score_view": "raw",
+  "stats_every": 50
+ },
+ "classifiers": {
+  "malware": "artifacts/models/malware.keras",
+  "phishing": "artifacts/models/phishing.keras",
+  "network": "artifacts/models/network.keras"
+ },
+ "env": {
+  "max_rounds": 36,
+  "pool_size": 256,
+  "detect_threshold": 0.5,
+  "p_phish": 0.35,
+  "p_exploit": 0.45,
+  "p_exploit_patched": 0.12,
+  "p_exploit_recon_bonus": 0.2,
+  "p_escalate": 0.65,
+  "p_escalate_patched": 0.25,
+  "p_lateral": 0.8,
+  "p_exfiltrate": 0.75,
+  "noise": {
+   "recon": 0.25,
+   "phish": 0.85,
+   "exploit": 0.75,
+   "escalate": 0.6,
+   "lateral_move": 0.4,
+   "exfiltrate": 0.9
+  },
+  "p_implant_leak": {
+   "malware": 0.2,
+   "phishing": 0.05,
+   "network": 0.1
+  },
+  "phish_max_footholds": 1,
+  "phish_forensics": true,
+  "phish_campaign_size": 3,
+  "p_reset_evicts": 0.5,
+  "r_win": 1.0,
+  "r_new_foothold": 0.05,
+  "r_server_foothold": 0.1,
+  "r_crown_foothold": 0.25,
+  "r_privilege": 0.05,
+  "r_foothold_lost": 0.1,
+  "r_turn": 0.005,
+  "r_isolate_true": 0.1,
+  "r_isolate_false": 0.3,
+  "r_detect_true": 0.0,
+  "r_detect_false": 0.0,
+  "r_isolated_upkeep": 0.03
+ },
+ "agents": {
+  "type": "dqn",
+  "kind": "dqn",
+  "lr": 0.001,
+  "hidden": [
+   64,
+   64
+  ],
+  "gamma": 0.95,
+  "n_step": 3,
+  "replay_size": 10000,
+  "batch_size": 64,
+  "target_sync": 250,
+  "train_every": 4,
+  "learn_start": 500,
+  "double_dqn": true,
+  "loss": "huber(delta=1)",
+  "optimizer": "adam(clipnorm=10)",
+  "target_network": "frozen copy of the online weights, synced every target_sync gradient steps",
+  "inference": "numpy mirror of the keras weights, synced after every train_on_batch",
+  "exploration": "epsilon-greedy: with prob. epsilon a uniform valid action type, then a uniform candidate of that action; otherwise argmax Q over all candidate moves",
+  "epsilon": {
+   "start": 1.0,
+   "end": 0.02,
+   "decay_frac": 0.6,
+   "schedule": "linear"
+  },
+  "candidates": "every legal (action, source, target) from env.candidates over valid_actions",
+  "feature_names": {
+   "red": [
+    "g_turn_frac",
+    "g_footholds",
+    "g_admin_footholds",
+    "g_has_server",
+    "g_has_crown",
+    "g_crown_admin",
+    "g_front_dist",
+    "g_hot",
+    "g_evasion_malware",
+    "g_evasion_phishing",
+    "g_evasion_network",
+    "t_none",
+    "t_dmz",
+    "t_workstation",
+    "t_server",
+    "t_crown",
+    "t_compromised",
+    "t_privilege",
+    "t_isolated",
+    "t_patched",
+    "t_recon",
+    "t_score_malware",
+    "t_score_phishing",
+    "t_score_network",
+    "t_score_max",
+    "t_dist",
+    "t_degree",
+    "t_closer",
+    "t_open_nbrs",
+    "s_has",
+    "s_privilege",
+    "s_recon",
+    "s_score_max",
+    "s_dist",
+    "p_success",
+    "a_recon",
+    "a_phish",
+    "a_exploit",
+    "a_escalate",
+    "a_lateral_move",
+    "a_exfiltrate",
+    "a_wait"
+   ],
+   "blue": [
+    "g_turn_frac",
+    "g_detected",
+    "g_isolated",
+    "g_confirmed",
+    "g_patched_frac",
+    "g_top_undetected",
+    "g_crown_detected",
+    "g_crown_isolated",
+    "g_crown_score",
+    "t_none",
+    "t_dmz",
+    "t_workstation",
+    "t_server",
+    "t_crown",
+    "t_detected",
+    "t_confirmed",
+    "t_isolated",
+    "t_patched",
+    "t_score_malware",
+    "t_score_phishing",
+    "t_score_network",
+    "t_score_max",
+    "t_dist",
+    "t_degree",
+    "t_nbr_detected",
+    "a_monitor",
+    "a_isolate",
+    "a_patch",
+    "a_restore",
+    "a_reset_credentials",
+    "a_wait"
+   ]
+  },
+  "files": "agents/{side}_qnet.keras + .json; checkpoints agents/checkpoints/{side}_qnet_<after>.keras"
+ },
+ "partition_sizes": {
+  "malware": {
+   "metric": {
+    "0": 406,
+    "1": 264
+   },
+   "arena_train": {
+    "0": 525,
+    "1": 261
+   },
+   "arena_eval": {
+    "0": 523,
+    "1": 263
+   }
+  },
+  "phishing": {
+   "metric": {
+    "0": 280,
+    "1": 302
+   },
+   "arena_train": {
+    "0": 281,
+    "1": 303
+   },
+   "arena_eval": {
+    "0": 283,
+    "1": 301
+   }
+  },
+  "network": {
+   "metric": {
+    "0": 405,
+    "1": 395
+   },
+   "arena_train": {
+    "0": 9704,
+    "1": 10616
+   },
+   "arena_eval": {
+    "0": 9704,
+    "1": 10615
+   }
+  }
+ },
+ "pools": {
+  "train_partition": "arena_train",
+  "eval_partition": "arena_eval",
+  "oversized": "pool_rows samples with replacement when a pool is larger than its partition"
+ },
+ "baseline": {
+  "kind": "heuristic",
+  "red_noise": 0.3,
+  "blue_noise": 0.4
+ },
+ "train_matchups": {
+  "cycle": [
+   "learned_vs_learned",
+   "red_learned_vs_blue_baseline",
+   "blue_learned_vs_red_baseline"
+  ],
+  "weights": [
+   0.5,
+   0.25,
+   0.25
+  ]
+ },
+ "eval": {
+  "every": 250,
+  "n": 200,
+  "log_n": 10,
+  "greedy": true,
+  "env_seeds": "1000003+j, j<n (same seeds at every checkpoint)",
+  "episode_ids": "eval episodes are numbered after the training episodes (>= episodes)",
+  "probe_game": {
+   "env_seed": 4242421,
+   "agent_rng_seed": 4242421,
+   "note": "one extra game per matchup per checkpoint, logged in full with probe_game: true, not counted in win rates; eval rows carry probe_episode"
+  }
+ },
+ "eval_evasive": {
+  "matchup": "blue_learned_vs_red_evasive",
+  "levels": [
+   0.4,
+   0.7
+  ],
+  "n": 100,
+  "opponent": "scripted red at fixed evasion s on every sensor; learned blue greedy",
+  "env": "separate eval env: same graph, own sensor pools (fresh benign/malicious pairings, seed stream [seed, 3]), evasion_cost applied, scores from this run's current detectors (v0 when adaptive is off); never used for training or detector labels",
+  "env_seeds": "1000003+j, j<n",
+  "turn_log": "probe game only (one per level)",
+  "evasion_cost": 0.25,
+  "pool_size": 1024
+ },
+ "logging": {
+  "episodes_jsonl": "full turn records for training episodes with episode % log_every == 0 and for the first eval.log_n eval episodes per matchup per checkpoint",
+  "log_every": 40,
+  "classifier_inputs": "only rows emitted this turn (acted-on node), rounded to 3 dp (scores 4 dp)",
+  "extra_turn_fields": [
+   "phase",
+   "matchup",
+   "agent",
+   "after_episode (eval only)",
+   "detector_versions",
+   "red_evasion",
+   "probe_game"
+  ],
+  "checkpoints": "agents/checkpoints/{red,blue}_<after_episode>.json at every eval",
+  "learning_jsonl": "detector_update / red_evasion / agent_stats / probe rows"
+ },
+ "adaptation": {
+  "evasion_levels": [
+   0.0,
+   0.1,
+   0.2,
+   0.3,
+   0.4,
+   0.5,
+   0.6,
+   0.7
+  ],
+  "pool_size": 1024,
+  "evasion": "malicious row = (1-s)*x_mal + s*x_ben (abstract feature-space blend); red success probability x (1 - evasion_cost * s) for actions watched by that sensor",
+  "action_sensor": {
+   "recon": "network",
+   "phish": "phishing",
+   "exploit": "network",
+   "escalate": "malware",
+   "lateral_move": "network",
+   "exfiltrate": "network"
+  },
+  "red_bandit": {
+   "kind": "epsilon_greedy",
+   "lr": 0.1,
+   "explore": 0.1,
+   "detect_penalty": 0.1,
+   "init_values": 0.0,
+   "payoff": "(progress from actions on that sensor - detect_penalty * flagged malicious readings) / actions, per game; learned red only, scripted red stays at 0"
+  },
+  "revealed_labels": "isolate / restore / reset_credentials on a host, or monitor on a host already proven compromised, reveal the true labels of that host's last rows (training games only)",
+  "detector_update": {
+   "every": 100,
+   "min_samples": 32,
+   "min_each_class": 4,
+   "buffer_per_class": 256,
+   "lr": 0.001,
+   "replay_frac": 0.5
+  },
+  "detectors_dir": "detectors/<model>_v<version>.keras",
+  "initial_eval": {
+   "malware": {
+    "version": 0,
+    "clean_auc": 0.9787,
+    "clean_recall": 0.9167,
+    "fpr": 0.0616,
+    "auc_by_level": {
+     "0.0": 0.9787,
+     "0.1": 0.9752,
+     "0.2": 0.9665,
+     "0.3": 0.945,
+     "0.4": 0.9076,
+     "0.5": 0.8489,
+     "0.6": 0.7785,
+     "0.7": 0.7089
+    },
+    "recall_by_level": {
+     "0.0": 0.9167,
+     "0.1": 0.9091,
+     "0.2": 0.8523,
+     "0.3": 0.7689,
+     "0.4": 0.6136,
+     "0.5": 0.4773,
+     "0.6": 0.3598,
+     "0.7": 0.2348
+    },
+    "n_eval": {
+     "benign": 406,
+     "malicious": 264
+    }
+   },
+   "phishing": {
+    "version": 0,
+    "clean_auc": 0.9888,
+    "clean_recall": 0.9305,
+    "fpr": 0.0357,
+    "auc_by_level": {
+     "0.0": 0.9888,
+     "0.1": 0.9864,
+     "0.2": 0.9798,
+     "0.3": 0.9641,
+     "0.4": 0.9322,
+     "0.5": 0.8789,
+     "0.6": 0.813,
+     "0.7": 0.7431
+    },
+    "recall_by_level": {
+     "0.0": 0.9305,
+     "0.1": 0.9106,
+     "0.2": 0.8907,
+     "0.3": 0.8079,
+     "0.4": 0.6689,
+     "0.5": 0.5099,
+     "0.6": 0.394,
+     "0.7": 0.2152
+    },
+    "n_eval": {
+     "benign": 280,
+     "malicious": 302
+    }
+   },
+   "network": {
+    "version": 0,
+    "clean_auc": 0.8703,
+    "clean_recall": 0.6861,
+    "fpr": 0.079,
+    "auc_by_level": {
+     "0.0": 0.8703,
+     "0.1": 0.8577,
+     "0.2": 0.8492,
+     "0.3": 0.8411,
+     "0.4": 0.8287,
+     "0.5": 0.8109,
+     "0.6": 0.782,
+     "0.7": 0.7377
+    },
+    "recall_by_level": {
+     "0.0": 0.6861,
+     "0.1": 0.6557,
+     "0.2": 0.6329,
+     "0.3": 0.5949,
+     "0.4": 0.4506,
+     "0.5": 0.2937,
+     "0.6": 0.1797,
+     "0.7": 0.0886
+    },
+    "n_eval": {
+     "benign": 405,
+     "malicious": 395
+    }
+   }
+  },
+  "final": {
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "red_evasion": {
+    "malware": 0.7,
+    "phishing": 0.7,
+    "network": 0.0
+   }
+  }
+ },
+ "wall_time_s": 198.7
+}

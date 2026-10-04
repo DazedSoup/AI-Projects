@@ -1,0 +1,17 @@
+{
+ "created": "2026-10-03T15:56:09-04:00",
+ "runs": [
+  "20261003-110349-7",
+  "20261003-110348-7"
+ ],
+ "experiments": [
+  "main",
+  "main-cheap-isolation",
+  "diag-detA-evB",
+  "diag-detA-evOff",
+  "diag-detF-evB",
+  "diag-detF-evOff"
+ ],
+ "default_run": "20261003-110349-7",
+ "bytes": 47197615
+}

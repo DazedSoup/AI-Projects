@@ -1,0 +1,405 @@
+{
+ "seed": 5,
+ "detectors_from": "20261003-020446-5",
+ "n_states": 490036,
+ "score_features": [
+  "g_top_undetected",
+  "g_crown_score",
+  "t_score_malware",
+  "t_score_phishing",
+  "t_score_network",
+  "t_score_max"
+ ],
+ "cells": [
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "v0",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.0,
+   "n": 200,
+   "blue_win_rate": 0.83,
+   "isolations_per_game": 3.075,
+   "isolate_clean_share": 0.1902,
+   "clean_flags_per_game": 0.91,
+   "monitors_per_game": 12.015,
+   "blue_turns_per_game": 26.48
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "v0",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.4,
+   "n": 200,
+   "blue_win_rate": 0.795,
+   "isolations_per_game": 2.755,
+   "isolate_clean_share": 0.2613,
+   "clean_flags_per_game": 0.96,
+   "monitors_per_game": 13.505,
+   "blue_turns_per_game": 28.84
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "v0",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.7,
+   "n": 200,
+   "blue_win_rate": 0.705,
+   "isolations_per_game": 2.13,
+   "isolate_clean_share": 0.4061,
+   "clean_flags_per_game": 1.22,
+   "monitors_per_game": 15.55,
+   "blue_turns_per_game": 30.66
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "v0",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.0,
+   "n": 200,
+   "blue_win_rate": 0.87,
+   "isolations_per_game": 2.625,
+   "isolate_clean_share": 0.1029,
+   "clean_flags_per_game": 1.225,
+   "monitors_per_game": 17.82,
+   "blue_turns_per_game": 30.7
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "v0",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.4,
+   "n": 200,
+   "blue_win_rate": 0.845,
+   "isolations_per_game": 2.365,
+   "isolate_clean_share": 0.1755,
+   "clean_flags_per_game": 1.595,
+   "monitors_per_game": 20.49,
+   "blue_turns_per_game": 32.37
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "v0",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.7,
+   "n": 200,
+   "blue_win_rate": 0.785,
+   "isolations_per_game": 1.805,
+   "isolate_clean_share": 0.2715,
+   "clean_flags_per_game": 1.785,
+   "monitors_per_game": 21.33,
+   "blue_turns_per_game": 31.57
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "shuffled",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.0,
+   "n": 200,
+   "blue_win_rate": 0.67,
+   "isolations_per_game": 7.025,
+   "isolate_clean_share": 0.6078,
+   "clean_flags_per_game": 6.155,
+   "monitors_per_game": 9.71,
+   "blue_turns_per_game": 25.43
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "shuffled",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.4,
+   "n": 200,
+   "blue_win_rate": 0.695,
+   "isolations_per_game": 7.095,
+   "isolate_clean_share": 0.6117,
+   "clean_flags_per_game": 6.375,
+   "monitors_per_game": 9.75,
+   "blue_turns_per_game": 25.61
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "shuffled",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.7,
+   "n": 200,
+   "blue_win_rate": 0.77,
+   "isolations_per_game": 7.285,
+   "isolate_clean_share": 0.6273,
+   "clean_flags_per_game": 6.685,
+   "monitors_per_game": 10.195,
+   "blue_turns_per_game": 26.96
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "shuffled",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.0,
+   "n": 200,
+   "blue_win_rate": 0.955,
+   "isolations_per_game": 7.995,
+   "isolate_clean_share": 0.4722,
+   "clean_flags_per_game": 8.795,
+   "monitors_per_game": 14.775,
+   "blue_turns_per_game": 34.97
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "shuffled",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.4,
+   "n": 200,
+   "blue_win_rate": 0.98,
+   "isolations_per_game": 7.695,
+   "isolate_clean_share": 0.4964,
+   "clean_flags_per_game": 9.04,
+   "monitors_per_game": 14.865,
+   "blue_turns_per_game": 35.12
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "shuffled",
+   "detector_versions": {
+    "malware": 0,
+    "phishing": 0,
+    "network": 0
+   },
+   "evasion": 0.7,
+   "n": 200,
+   "blue_win_rate": 0.97,
+   "isolations_per_game": 7.655,
+   "isolate_clean_share": 0.5114,
+   "clean_flags_per_game": 9.225,
+   "monitors_per_game": 14.79,
+   "blue_turns_per_game": 34.56
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "final",
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "evasion": 0.0,
+   "n": 200,
+   "blue_win_rate": 0.795,
+   "isolations_per_game": 2.645,
+   "isolate_clean_share": 0.1342,
+   "clean_flags_per_game": 0.515,
+   "monitors_per_game": 13.03,
+   "blue_turns_per_game": 26.73
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "final",
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "evasion": 0.4,
+   "n": 200,
+   "blue_win_rate": 0.805,
+   "isolations_per_game": 2.54,
+   "isolate_clean_share": 0.1201,
+   "clean_flags_per_game": 0.45,
+   "monitors_per_game": 14.09,
+   "blue_turns_per_game": 27.26
+  },
+  {
+   "blue_run": "20261003-020446-5",
+   "detectors": "final",
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "evasion": 0.7,
+   "n": 200,
+   "blue_win_rate": 0.805,
+   "isolations_per_game": 2.08,
+   "isolate_clean_share": 0.2572,
+   "clean_flags_per_game": 0.705,
+   "monitors_per_game": 16.04,
+   "blue_turns_per_game": 30.86
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "final",
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "evasion": 0.0,
+   "n": 200,
+   "blue_win_rate": 0.755,
+   "isolations_per_game": 2.53,
+   "isolate_clean_share": 0.0889,
+   "clean_flags_per_game": 0.745,
+   "monitors_per_game": 18.745,
+   "blue_turns_per_game": 30.29
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "final",
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "evasion": 0.4,
+   "n": 200,
+   "blue_win_rate": 0.825,
+   "isolations_per_game": 2.405,
+   "isolate_clean_share": 0.1372,
+   "clean_flags_per_game": 1.03,
+   "monitors_per_game": 20.685,
+   "blue_turns_per_game": 31.8
+  },
+  {
+   "blue_run": "20261003-020447-5",
+   "detectors": "final",
+   "detector_versions": {
+    "malware": 20,
+    "phishing": 20,
+    "network": 20
+   },
+   "evasion": 0.7,
+   "n": 200,
+   "blue_win_rate": 0.805,
+   "isolations_per_game": 1.915,
+   "isolate_clean_share": 0.1984,
+   "clean_flags_per_game": 1.045,
+   "monitors_per_game": 22.725,
+   "blue_turns_per_game": 32.09
+  }
+ ],
+ "saliency": {
+  "20261003-020446-5": {
+   "score_share": 0.1057,
+   "score_sum": 0.1642,
+   "other_sum": 1.3895,
+   "raw_grad_score_mean": 0.0984,
+   "raw_grad_other_mean": 0.2015,
+   "top": [
+    [
+     "g_turn_frac",
+     0.2718
+    ],
+    [
+     "g_crown_detected",
+     0.1273
+    ],
+    [
+     "g_crown_isolated",
+     0.1091
+    ],
+    [
+     "t_workstation",
+     0.103
+    ],
+    [
+     "a_monitor",
+     0.0978
+    ],
+    [
+     "a_patch",
+     0.0746
+    ],
+    [
+     "t_server",
+     0.0722
+    ],
+    [
+     "t_dmz",
+     0.069
+    ]
+   ]
+  },
+  "20261003-020447-5": {
+   "score_share": 0.1078,
+   "score_sum": 0.1764,
+   "other_sum": 1.4592,
+   "raw_grad_score_mean": 0.1071,
+   "raw_grad_other_mean": 0.2046,
+   "top": [
+    [
+     "g_turn_frac",
+     0.2815
+    ],
+    [
+     "g_crown_isolated",
+     0.1396
+    ],
+    [
+     "g_crown_detected",
+     0.1315
+    ],
+    [
+     "t_workstation",
+     0.1082
+    ],
+    [
+     "a_monitor",
+     0.0999
+    ],
+    [
+     "a_patch",
+     0.0944
+    ],
+    [
+     "t_dmz",
+     0.0842
+    ],
+    [
+     "t_server",
+     0.0717
+    ]
+   ]
+  }
+ }
+}
