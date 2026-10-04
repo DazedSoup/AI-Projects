@@ -1,4 +1,4 @@
-# cyberarena
+# CyberArena
 
 **A simulated red-team vs blue-team cyber range where both sides learn.** TensorFlow agents learn which hosts to
 attack and defend. Blue's TensorFlow malware, phishing and network-anomaly detectors retrain online as red learns to
