@@ -14,7 +14,7 @@ THANK YOU! :)
 
 | Project | What it is | Live showcase |
 |---|---|---|
-| [**cyberarena**](#cyberarena) | Red-team vs blue-team reinforcement learning in a simulated network. TensorFlow agents learn which hosts to attack and defend, blue's detectors retrain online as red learns to disguise itself, and every move is explained. | Streamlit app, from the `showcase` branch |
+| [**cyberarena**](#cyberarena) | Red-team vs blue-team reinforcement learning in a simulated network. TensorFlow agents learn which hosts to attack and defend, blue's detectors retrain online as red learns to disguise itself, and every move is explained. | Streamlit app, from the `CyberArena-Showcase` branch |
 
 ---
 
@@ -140,13 +140,13 @@ training code or model weights. It runs free on [Streamlit Community Cloud](http
    python -m cyberarena.showcase    # writes showcase/ (~45 MB; local paths scrubbed)
    python -m cyberarena.deploy      # writes build/streamlit-cloud: dashboard code + showcase + slim requirements
    ```
-3. **Commit the bundle to the `showcase` branch.** The first time, attach the folder to an orphan branch:
+3. **Commit the bundle to the `CyberArena-Showcase` branch.** The first time, attach the folder to an orphan branch:
    ```bash
-   git worktree add --orphan -b showcase build/streamlit-cloud   # once; then re-run step 2 to fill it
+   git worktree add --orphan -b CyberArena-Showcase build/streamlit-cloud   # once; then re-run step 2 to fill it
    cd build/streamlit-cloud
-   git add -A && git commit -m "Publish showcase" && git push -u origin showcase
+   git add -A && git commit -m "Publish showcase" && git push -u origin CyberArena-Showcase
    ```
-4. **Deploy:** on share.streamlit.io, choose **Create app**, then this repository, branch `showcase`, and main file
+4. **Deploy:** on share.streamlit.io, choose **Create app**, then this repository, branch `CyberArena-Showcase`, and main file
    `src/cyberarena/dashboard/app.py`. Under *Advanced settings*, pick **Python 3.12**.
 
 To update, re-run step 2, then `git add -A && git commit -m "Update showcase" && git push` inside
